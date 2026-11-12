@@ -1,56 +1,34 @@
-# Welcome to your Expo app 👋
+# Folio
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Personal investment portfolio app (Android + web), built with Expo SDK 58, Expo Router and TypeScript (strict).
 
-## Get started
+**Phase 1:** UI foundations with typed mock data. Later phases connect IBKR (Flex Query), crypto wallets/exchanges and RSS feeds through a Cloudflare Workers backend.
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Scripts
 
 ```bash
-npm run reset-project
+npm start            # expo start (Expo Go)
+npm run web          # web dev server
+npm test             # jest-expo + React Native Testing Library
+npm run typecheck    # tsc --noEmit
+npm run lint         # expo lint
+npm run doctor       # expo-doctor
+npx expo export --platform web
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+## Structure
 
-### Other setup steps
+```
+src/
+  app/                 Expo Router routes: (tabs)/index (Portfolio), news, settings
+  theme/               tokens: colors, spacing, radii, typography, motion, elevation + ThemeProvider
+  components/ui/       IslandCard, ListRow, ChangeChip, SegmentedControl, FilterChips, AnimatedNumber, Screen…
+  components/navigation/ FloatingTabBar (pill, detached, animated indicator)
+  components/charts/   ValueChart (area line), AllocationDonut
+  features/            screen sections (portfolio hero, allocation, sources, holdings, news cards)
+  services/            typed domain + data sources (mock now) + React Query hooks
+  store/               Zustand UI state (range, filters, privacy mode, theme)
+  lib/                 formatting, haptics (no-op on web), PRNG
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Swap data sources in `src/services/sources.ts`; hooks and screens stay unchanged.
