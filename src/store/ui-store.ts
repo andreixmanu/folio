@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import type { NewsCategory, TimeRange } from '@/services/types';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
-export type AllocationMode = 'class' | 'asset';
+export type AllocationMode = 'class' | 'asset' | 'source';
 export type NewsFilter = 'all' | NewsCategory;
 
 type UiState = {

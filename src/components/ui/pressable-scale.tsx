@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { haptics } from '@/lib/haptics';
-import { springs } from '@/theme';
+import { PRESS_SCALE, timings } from '@/theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -16,9 +16,9 @@ export type PressableScaleProps = Omit<PressableProps, 'style' | 'children'> & {
   haptic?: 'selection' | 'light' | 'medium' | false;
 };
 
-/** Pressable with spring "press-scale" feedback and haptics. */
+/** Pressable with subtle timing-based press-scale feedback and haptics. */
 export function PressableScale({
-  scaleTo = 0.97,
+  scaleTo = PRESS_SCALE,
   haptic = 'light',
   onPressIn,
   onPressOut,
@@ -37,11 +37,11 @@ export function PressableScale({
       {...rest}
       disabled={disabled}
       onPressIn={(e) => {
-        scale.set(withSpring(scaleTo, springs.press));
+        scale.set(withTiming(scaleTo, timings.pressIn));
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        scale.set(withSpring(1, springs.press));
+        scale.set(withTiming(1, timings.pressOut));
         onPressOut?.(e);
       }}
       onPress={(e) => {

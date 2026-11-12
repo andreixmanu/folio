@@ -1,19 +1,20 @@
 import * as WebBrowser from 'expo-web-browser';
 import { View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import {
   AppText,
   FilterChips,
   IslandCard,
+  RowSeparator,
   Screen,
   ScreenHeader,
   Skeleton,
 } from '@/components/ui';
-import { ArticleCard } from '@/features/news/article-card';
+import { ArticleRow } from '@/features/news/article-card';
 import { useNews } from '@/services/hooks';
 import { useUiStore, type NewsFilter } from '@/store/ui-store';
-import { useTheme } from '@/theme';
+import { enterFade, useTheme } from '@/theme';
 
 const FILTERS: { value: NewsFilter; label: string }[] = [
   { value: 'all', label: 'Tutte' },
@@ -32,38 +33,32 @@ export default function NewsScreen() {
       <ScreenHeader eyebrow="Mercati e crypto" title="Notizie" />
       <FilterChips options={FILTERS} value={filter} onChange={setFilter} testID="news-filter" />
 
-      {news.data ? (
-        <Animated.View layout={LinearTransition.springify().damping(22)} style={{ gap: theme.spacing.lg }}>
-          {news.data.map((article, i) => (
-            <Animated.View
-              key={article.id}
-              entering={FadeIn.delay(i * 30)}
-              exiting={FadeOut.duration(120)}
-              layout={LinearTransition.springify().damping(22)}>
-              <ArticleCard
+      <IslandCard index={0} padding="lg" style={{ paddingVertical: theme.spacing.xs }}>
+        {news.data ? (
+          news.data.map((article, i) => (
+            <Animated.View key={article.id} entering={enterFade(i)}>
+              {i > 0 ? <RowSeparator inset={0} /> : null}
+              <ArticleRow
                 article={article}
-                index={i}
                 onPress={() => void WebBrowser.openBrowserAsync(article.url)}
               />
             </Animated.View>
-          ))}
-          <AppText variant="caption" color="textTertiary" align="center">
-            Dati di esempio · Feed RSS in arrivo
-          </AppText>
-        </Animated.View>
-      ) : (
-        <View style={{ gap: theme.spacing.lg }}>
-          {[0, 1, 2].map((i) => (
-            <IslandCard key={i}>
-              <View style={{ gap: theme.spacing.sm }}>
-                <Skeleton width={140} height={12} />
-                <Skeleton height={18} />
-                <Skeleton width="80%" height={14} />
+          ))
+        ) : (
+          <View style={{ gap: theme.spacing.lg, paddingVertical: theme.spacing.md }}>
+            {[0, 1, 2, 3].map((i) => (
+              <View key={i} style={{ gap: 6 }}>
+                <Skeleton width={120} height={10} />
+                <Skeleton height={16} />
+                <Skeleton width="75%" height={12} />
               </View>
-            </IslandCard>
-          ))}
-        </View>
-      )}
+            ))}
+          </View>
+        )}
+      </IslandCard>
+      <AppText variant="micro" color="textTertiary" align="center">
+        Dati di esempio · Feed RSS in arrivo
+      </AppText>
     </Screen>
   );
 }

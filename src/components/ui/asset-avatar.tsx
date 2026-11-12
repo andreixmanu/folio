@@ -10,8 +10,6 @@ const SYMBOL_COLORS: Record<string, string> = {
   BTC: '#F7931A',
   ETH: '#627EEA',
   SOL: '#14F195',
-  USDC: '#2775CA',
-  EUR: '#35C2FF',
   NVDA: '#76B900',
   AAPL: '#A2AAAD',
   MSFT: '#00A4EF',
@@ -22,7 +20,7 @@ const SYMBOL_COLORS: Record<string, string> = {
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 /** Circular avatar for an asset (symbol initials on a tinted background). */
-export function AssetAvatar({ symbol, size = 40 }: { symbol: string; size?: number }) {
+export function AssetAvatar({ symbol, size = 36 }: { symbol: string; size?: number }) {
   const theme = useTheme();
   const color = SYMBOL_COLORS[symbol] ?? theme.colors.accent;
   return (
@@ -49,7 +47,7 @@ export function AssetAvatar({ symbol, size = 40 }: { symbol: string; size?: numb
 export function IconBadge({
   name,
   color,
-  size = 40,
+  size = 36,
 }: {
   name: IconName;
   color?: string;

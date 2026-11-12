@@ -25,8 +25,9 @@ export default function TabLayout() {
       tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        // Smooth cross-fade + slight shift between tabs.
-        animation: 'shift',
+        // Short cross-fade between tabs.
+        animation: 'fade',
+        transitionSpec: { animation: 'timing', config: { duration: 180 } },
         sceneStyle: { backgroundColor: theme.colors.background },
       }}>
       <Tabs.Screen

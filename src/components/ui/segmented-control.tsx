@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Pressable, View, type LayoutChangeEvent } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { haptics } from '@/lib/haptics';
-import { springs, useTheme } from '@/theme';
+import { timings, useTheme } from '@/theme';
 
 import { AppText } from './text';
 
@@ -19,7 +19,7 @@ export type SegmentedControlProps<T extends string> = {
 
 const PAD = 4;
 
-/** Pill segmented control with a spring-animated sliding thumb (used for time ranges). */
+/** Pill segmented control with an eased sliding thumb (used for time ranges). */
 export function SegmentedControl<T extends string>({
   options,
   value,
@@ -48,7 +48,7 @@ export function SegmentedControl<T extends string>({
   useEffect(() => {
     // Slide the thumb whenever the selection (or the measured width) changes.
     if (segmentWidth <= 0) return;
-    translateX.set(withSpring(selectedIndex * segmentWidth, springs.indicator));
+    translateX.set(withTiming(selectedIndex * segmentWidth, timings.indicator));
     thumbWidth.set(segmentWidth);
   }, [selectedIndex, segmentWidth, translateX, thumbWidth]);
 

@@ -6,13 +6,11 @@ import {
   ProfileAvatar,
   Screen,
   ScreenHeader,
-  SectionTitle,
   Skeleton,
 } from '@/components/ui';
 import { AllocationCard } from '@/features/portfolio/allocation-card';
 import { HoldingsBySource } from '@/features/portfolio/holdings-by-source';
 import { PortfolioHero } from '@/features/portfolio/portfolio-hero';
-import { SourcesStrip } from '@/features/portfolio/sources-strip';
 import { usePortfolio } from '@/services/hooks';
 import { useUiStore } from '@/store/ui-store';
 import { useTheme } from '@/theme';
@@ -20,16 +18,16 @@ import { useTheme } from '@/theme';
 function LoadingState() {
   const theme = useTheme();
   return (
-    <View style={{ gap: theme.spacing.lg }}>
-      <IslandCard padding="xl">
+    <View style={{ gap: theme.spacing.md }}>
+      <IslandCard>
         <View style={{ gap: theme.spacing.md }}>
           <Skeleton width={110} height={14} />
           <Skeleton width={220} height={40} radius={12} />
-          <Skeleton height={180} radius={theme.radii.lg} />
+          <Skeleton height={150} radius={theme.radii.lg} />
         </View>
       </IslandCard>
       <IslandCard>
-        <Skeleton height={160} radius={theme.radii.lg} />
+        <Skeleton height={120} radius={theme.radii.lg} />
       </IslandCard>
     </View>
   );
@@ -62,9 +60,7 @@ export default function PortfolioScreen() {
       {portfolio.data ? (
         <>
           <PortfolioHero totalValue={portfolio.data.totalValue} />
-          <SourcesStrip snapshot={portfolio.data} />
-          <AllocationCard holdings={portfolio.data.holdings} />
-          <SectionTitle title="Posizioni" />
+          <AllocationCard snapshot={portfolio.data} />
           <HoldingsBySource snapshot={portfolio.data} />
         </>
       ) : (

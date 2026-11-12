@@ -1,9 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps, ReactNode } from 'react';
 import { View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
-import { useTheme } from '@/theme';
+import { enterFade, useTheme } from '@/theme';
 
 import { PressableScale } from './pressable-scale';
 import { AppText } from './text';
@@ -20,13 +20,13 @@ export function ScreenHeader({ title, eyebrow, right }: ScreenHeaderProps) {
   const theme = useTheme();
   return (
     <Animated.View
-      entering={FadeIn.duration(300)}
+      entering={enterFade()}
       style={{
         flexDirection: 'row',
         alignItems: 'flex-end',
         justifyContent: 'space-between',
-        paddingTop: theme.spacing.sm,
-        paddingBottom: theme.spacing.lg,
+        paddingTop: theme.spacing.xs,
+        paddingBottom: theme.spacing.xs,
       }}>
       <View style={{ flex: 1, gap: 2 }}>
         {eyebrow ? (
@@ -58,13 +58,13 @@ export function IconButton({
     <PressableScale
       onPress={onPress}
       haptic="selection"
-      scaleTo={0.9}
+      scaleTo={0.94}
       accessibilityLabel={accessibilityLabel}
       style={[
         {
-          width: 40,
-          height: 40,
-          borderRadius: 20,
+          width: 36,
+          height: 36,
+          borderRadius: 18,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: theme.colors.surface,
@@ -72,7 +72,7 @@ export function IconButton({
           borderColor: theme.colors.border,
         },
       ]}>
-      <Ionicons name={name} size={19} color={theme.colors.text} />
+      <Ionicons name={name} size={18} color={theme.colors.text} />
     </PressableScale>
   );
 }
@@ -83,9 +83,9 @@ export function ProfileAvatar({ initials }: { initials: string }) {
   return (
     <View
       style={{
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: theme.colors.accentMuted,

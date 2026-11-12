@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
-import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { AppText } from '@/components/ui/text';
 import { formatMoney, formatPercent, MASK } from '@/lib/format';
 import type { AllocationSlice } from '@/services/types';
-import { useTheme } from '@/theme';
+import { enterFade, useTheme } from '@/theme';
 
 export type AllocationDonutProps = {
   slices: AllocationSlice[];
@@ -15,8 +15,8 @@ export type AllocationDonutProps = {
   radius?: number;
 };
 
-/** Donut chart with a tappable legend; the center shows the selected slice. */
-export function AllocationDonut({ slices, masked = false, radius = 84 }: AllocationDonutProps) {
+/** Compact donut with a tappable legend; the center shows the selected slice. */
+export function AllocationDonut({ slices, masked = false, radius = 56 }: AllocationDonutProps) {
   const theme = useTheme();
   const [selected, setSelected] = useState(0);
   const current = slices[Math.min(selected, slices.length - 1)];
@@ -29,23 +29,23 @@ export function AllocationDonut({ slices, masked = false, radius = 84 }: Allocat
   }));
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.lg }}>
-      <Animated.View entering={ZoomIn.springify().damping(16)} key={slices.map((s) => s.key).join('|')}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+      <Animated.View entering={enterFade()}>
         <PieChart
           data={data}
           donut
           radius={radius}
-          innerRadius={radius * 0.72}
+          innerRadius={radius * 0.74}
           innerCircleColor={theme.colors.surface}
-          strokeWidth={3}
+          strokeWidth={2}
           strokeColor={theme.colors.surface}
           focusOnPress
           sectionAutoFocus
-          extraRadius={6}
+          extraRadius={3}
           centerLabelComponent={() =>
             current ? (
-              <View style={{ alignItems: 'center' }}>
-                <AppText variant="title" tabular>
+              <View style={{ alignItems: 'center', maxWidth: radius * 1.3 }}>
+                <AppText variant="headline" tabular>
                   {formatPercent(current.percent, { signed: false })}
                 </AppText>
                 <AppText variant="micro" color="textSecondary" numberOfLines={1}>
@@ -56,37 +56,34 @@ export function AllocationDonut({ slices, masked = false, radius = 84 }: Allocat
           }
         />
       </Animated.View>
-      <View style={{ flex: 1, gap: 2 }}>
+      <View style={{ flex: 1 }}>
         {slices.map((s, i) => (
           <PressableScale
             key={s.key}
             haptic="selection"
-            scaleTo={0.97}
             onPress={() => setSelected(i)}
             accessibilityLabel={`${s.label} ${formatPercent(s.percent, { signed: false })}`}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               gap: theme.spacing.sm,
-              paddingVertical: 5,
+              paddingVertical: 3,
               paddingHorizontal: theme.spacing.sm,
-              borderRadius: theme.radii.sm,
+              borderRadius: theme.radii.xs,
               backgroundColor: i === selected ? theme.colors.surfaceMuted : 'transparent',
             }}>
             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: s.color }} />
-            <Animated.View entering={FadeIn.delay(i * 40)} style={{ flex: 1 }}>
+            <View style={{ flex: 1 }}>
               <AppText variant="caption" numberOfLines={1}>
                 {s.label}
               </AppText>
-            </Animated.View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <AppText variant="label" tabular>
-                {formatPercent(s.percent, { signed: false })}
-              </AppText>
-              <AppText variant="micro" color="textSecondary" tabular>
+              <AppText variant="micro" color="textTertiary" tabular>
                 {masked ? MASK : formatMoney(s.value, 'EUR', { fractionDigits: 0 })}
               </AppText>
             </View>
+            <AppText variant="label" tabular style={{ minWidth: 48, textAlign: 'right' }}>
+              {formatPercent(s.percent, { signed: false })}
+            </AppText>
           </PressableScale>
         ))}
       </View>

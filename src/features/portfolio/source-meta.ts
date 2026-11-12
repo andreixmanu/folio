@@ -7,6 +7,7 @@ export const SOURCE_ICONS: Record<SourceKind, ComponentProps<typeof Ionicons>['n
   broker: 'business',
   wallet: 'wallet',
   exchange: 'swap-horizontal',
+  bank: 'card',
 };
 
 export const SOURCE_COLORS: Record<string, string> = {

@@ -1,11 +1,10 @@
 import type { ColorTokens } from '@/theme/colors';
 
-import type { AllocationSlice, AssetClass, Holding } from './types';
+import type { AllocationSlice, AssetClass, Holding, Source } from './types';
 
 const CLASS_LABELS: Record<AssetClass, string> = {
   stocks: 'Azioni & ETF',
   crypto: 'Crypto',
-  cash: 'Liquidità',
 };
 
 function toSlices(
@@ -18,9 +17,9 @@ function toSlices(
     .map((e) => ({ ...e, percent: total > 0 ? (e.value / total) * 100 : 0 }));
 }
 
-/** Allocation by asset class (stocks vs crypto vs cash). */
+/** Allocation by asset class (stocks & ETFs vs crypto). */
 export function allocationByClass(holdings: Holding[], colors: ColorTokens): AllocationSlice[] {
-  const totals: Record<AssetClass, number> = { stocks: 0, crypto: 0, cash: 0 };
+  const totals: Record<AssetClass, number> = { stocks: 0, crypto: 0 };
   for (const h of holdings) totals[h.assetClass] += h.value;
   return toSlices(
     (Object.keys(totals) as AssetClass[]).map((k) => ({
@@ -54,6 +53,22 @@ export function allocationByAsset(
   }));
   if (rest > 0) entries.push({ key: 'other', label: 'Altro', value: rest, color: colors.textTertiary });
   return toSlices(entries);
+}
+
+/** Allocation by source (IBKR, each wallet, each exchange; later a bank). */
+export function allocationBySource(
+  holdings: Holding[],
+  sources: Source[],
+  colorFor: (sourceId: string, index: number) => string,
+): AllocationSlice[] {
+  return toSlices(
+    sources.map((s, i) => ({
+      key: s.id,
+      label: s.name,
+      value: holdings.filter((h) => h.sourceId === s.id).reduce((sum, h) => sum + h.value, 0),
+      color: colorFor(s.id, i),
+    })),
+  );
 }
 
 export const ASSET_CLASS_LABELS = CLASS_LABELS;

@@ -42,11 +42,11 @@ export function ListRow({
         flexDirection: 'row',
         alignItems: 'center',
         gap: theme.spacing.md,
-        paddingVertical: theme.spacing.md,
-        minHeight: 60,
+        paddingVertical: 10,
+        minHeight: 52,
       }}>
       {leading}
-      <View style={{ flex: 1, gap: 2 }}>
+      <View style={{ flex: 1, gap: 1 }}>
         <AppText variant="bodyStrong" numberOfLines={1}>
           {title}
         </AppText>
@@ -57,7 +57,7 @@ export function ListRow({
         ) : null}
       </View>
       {accessory ?? (
-        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+        <View style={{ alignItems: 'flex-end', gap: 2 }}>
           {value ? (
             <AppText variant="bodyStrong" tabular>
               {value}
@@ -74,14 +74,14 @@ export function ListRow({
 
   if (!onPress) return <View testID={testID}>{content}</View>;
   return (
-    <PressableScale onPress={onPress} scaleTo={0.98} testID={testID} accessibilityLabel={title}>
+    <PressableScale onPress={onPress} testID={testID} accessibilityLabel={title}>
       {content}
     </PressableScale>
   );
 }
 
-/** Hairline separator aligned with row text (after a 40px avatar + gap). */
-export function RowSeparator({ inset = 52 }: { inset?: number }) {
+/** Hairline separator aligned with row text (after a 36px avatar + gap). */
+export function RowSeparator({ inset = 48 }: { inset?: number }) {
   const theme = useTheme();
   return <View style={{ height: 1, marginLeft: inset, backgroundColor: theme.colors.border }} />;
 }

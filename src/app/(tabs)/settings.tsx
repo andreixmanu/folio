@@ -44,8 +44,8 @@ function SoonBadge() {
   return (
     <View
       style={{
-        paddingHorizontal: 8,
-        paddingVertical: 3,
+        paddingHorizontal: 7,
+        paddingVertical: 2,
         borderRadius: theme.radii.pill,
         backgroundColor: theme.colors.surfaceMuted,
       }}>
@@ -84,13 +84,24 @@ export default function SettingsScreen() {
         ))}
       </IslandCard>
 
-      <SectionTitle title="Aspetto" />
+      <SectionTitle title="Preferenze" />
       <IslandCard index={1}>
-        <View style={{ gap: theme.spacing.md, paddingVertical: theme.spacing.sm }}>
-          <AppText variant="bodyStrong">Tema</AppText>
-          <SegmentedControl options={THEME_OPTIONS} value={themeMode} onChange={setThemeMode} size="sm" />
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: theme.spacing.md,
+            paddingVertical: 10,
+          }}>
+          <IconBadge name="contrast" color={theme.colors.accent} />
+          <AppText variant="bodyStrong" style={{ flex: 1 }}>
+            Tema
+          </AppText>
+          <View style={{ width: 196 }}>
+            <SegmentedControl options={THEME_OPTIONS} value={themeMode} onChange={setThemeMode} size="sm" />
+          </View>
         </View>
-        <RowSeparator inset={0} />
+        <RowSeparator />
         <ListRow
           leading={<IconBadge name="eye-off" color={theme.colors.accent} />}
           title="Nascondi saldi"
@@ -107,14 +118,11 @@ export default function SettingsScreen() {
             />
           }
         />
-      </IslandCard>
-
-      <SectionTitle title="Info" />
-      <IslandCard index={2}>
+        <RowSeparator />
         <ListRow
           leading={<IconBadge name="information-circle" color={theme.colors.textSecondary} />}
           title="Versione"
-          subtitle="Fase 1 · interfaccia con dati di esempio"
+          subtitle="Fase 1 · dati di esempio"
           value={Constants.expoConfig?.version ?? '0.1.0'}
         />
       </IslandCard>

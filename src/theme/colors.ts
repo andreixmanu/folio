@@ -33,7 +33,6 @@ export type ColorTokens = {
   assetClass: {
     stocks: string;
     crypto: string;
-    cash: string;
   };
 };
 
@@ -72,7 +71,6 @@ export const darkColors: ColorTokens = {
   assetClass: {
     stocks: '#7C6CFF',
     crypto: '#FFB547',
-    cash: '#35C2FF',
   },
 };
 
@@ -98,6 +96,5 @@ export const lightColors: ColorTokens = {
   assetClass: {
     stocks: '#5B4BFF',
     crypto: '#E59A1F',
-    cash: '#1FA6E0',
   },
 };

@@ -7,9 +7,15 @@
 export type TimeRange = '1D' | '1W' | '1M' | '1Y' | 'ALL';
 export const TIME_RANGES: readonly TimeRange[] = ['1D', '1W', '1M', '1Y', 'ALL'];
 
-export type AssetClass = 'stocks' | 'crypto' | 'cash';
+/**
+ * Asset classes tracked by the app. Cash is intentionally excluded (it lives on Revolut).
+ * To add it later: extend this union (e.g. `| 'cash'`), add a label in `allocation.ts`
+ * and a color in `theme/colors.ts` (`assetClass`); TypeScript will flag every place to update.
+ */
+export type AssetClass = 'stocks' | 'crypto';
 
-export type SourceKind = 'broker' | 'wallet' | 'exchange';
+/** `bank` is reserved for a future bank/Revolut source (balances, income/expenses). */
+export type SourceKind = 'broker' | 'wallet' | 'exchange' | 'bank';
 
 export type Source = {
   id: string;
@@ -26,7 +32,7 @@ export type Holding = {
   name: string;
   assetClass: AssetClass;
   /** Finer instrument type, for display only. */
-  instrument: 'stock' | 'etf' | 'coin' | 'stablecoin' | 'cash';
+  instrument: 'stock' | 'etf' | 'coin';
   quantity: number;
   /** Last price in the portfolio base currency. */
   price: number;

@@ -4,12 +4,12 @@ import { Pressable, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 import { AppText } from '@/components/ui/text';
 import { haptics } from '@/lib/haptics';
-import { springs, useTheme } from '@/theme';
+import { timings, useTheme } from '@/theme';
 
 const INNER_PAD = 6;
 
@@ -29,15 +29,7 @@ function TabItem({
   testID?: string;
 }) {
   const scale = useSharedValue(1);
-  const lift = useSharedValue(focused ? 1 : 0);
-
-  useEffect(() => {
-    lift.set(withSpring(focused ? 1 : 0, springs.indicator));
-  }, [focused, lift]);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.get() * (1 + lift.get() * 0.04) }],
-  }));
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
 
   return (
     <Pressable
@@ -47,8 +39,8 @@ function TabItem({
       testID={testID}
       onPress={onPress}
       onLongPress={onLongPress}
-      onPressIn={() => scale.set(withSpring(0.9, springs.press))}
-      onPressOut={() => scale.set(withSpring(1, springs.press))}
+      onPressIn={() => scale.set(withTiming(0.96, timings.pressIn))}
+      onPressOut={() => scale.set(withTiming(1, timings.pressOut))}
       style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={[{ alignItems: 'center', gap: 2 }, style]}>
         {icon}
@@ -61,7 +53,7 @@ function TabItem({
 }
 
 /**
- * Pill-shaped floating tab bar, detached from screen edges, with a spring-animated
+ * Pill-shaped floating tab bar, detached from screen edges, with an eased
  * selection indicator and haptic ticks. Sits above the Android gesture/navigation bar.
  */
 export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, insets }: BottomTabBarProps) {
@@ -72,7 +64,7 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
   const indicatorX = useSharedValue(0);
 
   useEffect(() => {
-    if (itemWidth > 0) indicatorX.set(withSpring(state.index * itemWidth, springs.indicator));
+    if (itemWidth > 0) indicatorX.set(withTiming(state.index * itemWidth, timings.indicator));
   }, [state.index, itemWidth, indicatorX]);
 
   const indicatorStyle = useAnimatedStyle(() => ({

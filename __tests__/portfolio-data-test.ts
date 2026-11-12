@@ -1,4 +1,4 @@
-import { allocationByAsset, allocationByClass } from '@/services/allocation';
+import { allocationByAsset, allocationByClass, allocationBySource } from '@/services/allocation';
 import { buildMockHistory, buildMockSnapshot } from '@/services/mock/portfolio';
 import { TIME_RANGES } from '@/services/types';
 import { darkColors } from '@/theme/colors';
@@ -19,9 +19,9 @@ describe('mock portfolio data layer', () => {
     expect(history.changePct).toBeGreaterThan(0);
   });
 
-  test('allocation by class sums to 100% and covers stocks, crypto, cash', () => {
+  test('allocation by class sums to 100% and covers stocks and crypto only', () => {
     const slices = allocationByClass(snapshot.holdings, darkColors);
-    expect(slices.map((s) => s.key).sort()).toEqual(['cash', 'crypto', 'stocks']);
+    expect(slices.map((s) => s.key).sort()).toEqual(['crypto', 'stocks']);
     expect(slices.reduce((s, x) => s + x.percent, 0)).toBeCloseTo(100, 5);
   });
 
@@ -31,5 +31,19 @@ describe('mock portfolio data layer', () => {
     const btcHoldings = snapshot.holdings.filter((h) => h.symbol === 'BTC');
     expect(btcHoldings).toHaveLength(2);
     expect(btc?.value).toBeCloseTo(btcHoldings.reduce((s, h) => s + h.value, 0), 2);
+  });
+
+  test('mock data contains no cash or stablecoin positions', () => {
+    const classes = new Set(snapshot.holdings.map((h) => h.assetClass));
+    expect([...classes].sort()).toEqual(['crypto', 'stocks']);
+    const symbols = snapshot.holdings.map((h) => h.symbol);
+    expect(symbols).not.toContain('EUR');
+    expect(symbols).not.toContain('USDC');
+  });
+
+  test('allocation by source gives one slice per source summing to the total', () => {
+    const slices = allocationBySource(snapshot.holdings, snapshot.sources, () => '#000');
+    expect(slices).toHaveLength(snapshot.sources.length);
+    expect(slices.reduce((s, x) => s + x.value, 0)).toBeCloseTo(snapshot.totalValue, 1);
   });
 });

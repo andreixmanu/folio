@@ -13,9 +13,9 @@ type Variant = Pick<TextStyle, 'fontFamily' | 'fontSize' | 'lineHeight' | 'lette
 
 export const typography = {
   /** Hero numbers such as the portfolio total. */
-  display: { fontFamily: fonts.bold, fontSize: 40, lineHeight: 46, letterSpacing: -1.2 },
+  display: { fontFamily: fonts.bold, fontSize: 36, lineHeight: 42, letterSpacing: -1 },
   /** Large screen titles. */
-  largeTitle: { fontFamily: fonts.bold, fontSize: 32, lineHeight: 38, letterSpacing: -0.8 },
+  largeTitle: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34, letterSpacing: -0.6 },
   title: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 28, letterSpacing: -0.4 },
   headline: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22, letterSpacing: -0.2 },
   body: { fontFamily: fonts.medium, fontSize: 15, lineHeight: 20, letterSpacing: -0.1 },

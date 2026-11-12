@@ -1,7 +1,7 @@
 import { ScrollView } from 'react-native';
-import Animated, { useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
-import { springs, useTheme } from '@/theme';
+import { timings, useTheme } from '@/theme';
 
 import { PressableScale } from './pressable-scale';
 import { AppText } from './text';
@@ -11,8 +11,7 @@ export type FilterChipOption<T extends string> = { value: T; label: string };
 function Chip({ label, selected, onPress, testID }: { label: string; selected: boolean; onPress: () => void; testID?: string }) {
   const theme = useTheme();
   const bgStyle = useAnimatedStyle(() => ({
-    backgroundColor: withTiming(selected ? theme.colors.text : theme.colors.surface, { duration: 180 }),
-    transform: [{ scale: withSpring(selected ? 1 : 0.98, springs.press) }],
+    backgroundColor: withTiming(selected ? theme.colors.text : theme.colors.surface, timings.fade),
   }));
   return (
     <PressableScale
@@ -25,8 +24,8 @@ function Chip({ label, selected, onPress, testID }: { label: string; selected: b
       <Animated.View
         style={[
           {
-            paddingHorizontal: theme.spacing.lg,
-            height: 36,
+            paddingHorizontal: theme.spacing.md + 2,
+            height: 32,
             justifyContent: 'center',
             borderRadius: theme.radii.pill,
             borderWidth: 1,

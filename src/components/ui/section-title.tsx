@@ -13,7 +13,6 @@ export function SectionTitle({ title, right }: { title: string; right?: ReactNod
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginTop: theme.spacing.sm,
         paddingHorizontal: theme.spacing.xs,
       }}>
       <AppText variant="headline">{title}</AppText>

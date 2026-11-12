@@ -36,8 +36,8 @@ export function PortfolioHero({ totalValue }: { totalValue: number }) {
   const changePct = history.data?.changePct ?? 0;
 
   return (
-    <IslandCard index={0} padding="xl" elevated={2} testID="portfolio-hero">
-      <View style={{ gap: theme.spacing.sm }}>
+    <IslandCard index={0} padding="lg" elevated={2} testID="portfolio-hero">
+      <View style={{ gap: theme.spacing.xs }}>
         <AppText variant="caption" color="textSecondary">
           Valore totale
         </AppText>
@@ -56,16 +56,17 @@ export function PortfolioHero({ totalValue }: { totalValue: number }) {
         </View>
       </View>
 
-      <View style={{ marginTop: theme.spacing.lg, marginBottom: theme.spacing.lg }}>
+      <View style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.md }}>
         {history.data ? (
           <ValueChart
             points={history.data.points}
             range={range}
             trend={change >= 0 ? 'up' : 'down'}
             masked={masked}
+            height={150}
           />
         ) : (
-          <Skeleton height={180} radius={theme.radii.lg} />
+          <Skeleton height={150} radius={theme.radii.lg} />
         )}
       </View>
 

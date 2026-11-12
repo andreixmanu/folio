@@ -37,7 +37,7 @@ export function Screen({ children, refreshing = false, onRefresh, testID }: Scre
   }));
 
   const bottomPadding =
-    theme.layout.tabBarHeight + theme.layout.tabBarBottomGap + insets.bottom + theme.spacing.xxl;
+    theme.layout.tabBarHeight + theme.layout.tabBarBottomGap + insets.bottom + theme.spacing.lg;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }} testID={testID}>
@@ -46,13 +46,13 @@ export function Screen({ children, refreshing = false, onRefresh, testID }: Scre
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingTop: insets.top + theme.spacing.sm,
+          paddingTop: insets.top + theme.spacing.xs,
           paddingBottom: bottomPadding,
           paddingHorizontal: theme.layout.screenPadding,
           width: '100%',
           maxWidth: theme.layout.maxContentWidth,
           alignSelf: 'center',
-          gap: theme.spacing.lg,
+          gap: theme.spacing.md,
         }}
         refreshControl={
           onRefresh ? (

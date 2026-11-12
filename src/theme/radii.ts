@@ -4,7 +4,7 @@ export const radii = {
   md: 16,
   lg: 22,
   /** Default island corner radius. */
-  xl: 28,
+  xl: 24,
   pill: 999,
 } as const;
 

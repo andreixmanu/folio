@@ -20,7 +20,7 @@ export type ValueChartProps = {
  * Area chart of portfolio value over time (react-native-gifted-charts + react-native-svg,
  * works in Expo Go and on web). Drag to scrub: a floating label shows value and date.
  */
-export function ValueChart({ points, range, height = 180, trend, masked = false }: ValueChartProps) {
+export function ValueChart({ points, range, height = 150, trend, masked = false }: ValueChartProps) {
   const theme = useTheme();
   const [width, setWidth] = useState(0);
   const color = trend === 'up' ? theme.colors.positive : theme.colors.negative;

@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
-import { STAGGER_MS, useTheme, type SpacingToken } from '@/theme';
+import { enterUp, useTheme, type SpacingToken } from '@/theme';
 
 import { PressableScale } from './pressable-scale';
 
@@ -58,16 +58,10 @@ export function IslandCard({
     style,
   ];
 
-  const entering =
-    index === undefined
-      ? undefined
-      : FadeInDown.delay(index * STAGGER_MS * 2)
-          .springify()
-          .damping(20)
-          .stiffness(180);
+  const entering = index === undefined ? undefined : enterUp(index);
 
   return (
-    <Animated.View entering={entering} layout={LinearTransition.springify().damping(22)}>
+    <Animated.View entering={entering}>
       {onPress ? (
         <PressableScale
           onPress={onPress}

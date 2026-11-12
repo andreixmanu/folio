@@ -26,12 +26,10 @@ const RAW_HOLDINGS: RawHolding[] = [
   { id: 'ibkr-nvda', sourceId: 'ibkr', symbol: 'NVDA', name: 'NVIDIA', assetClass: 'stocks', instrument: 'stock', quantity: 64, price: 171.22, changePct: 2.34 },
   { id: 'ibkr-aapl', sourceId: 'ibkr', symbol: 'AAPL', name: 'Apple', assetClass: 'stocks', instrument: 'stock', quantity: 40, price: 218.05, changePct: -0.87 },
   { id: 'ibkr-msft', sourceId: 'ibkr', symbol: 'MSFT', name: 'Microsoft', assetClass: 'stocks', instrument: 'stock', quantity: 22, price: 431.9, changePct: 0.18 },
-  { id: 'ibkr-eur', sourceId: 'ibkr', symbol: 'EUR', name: 'Liquidità EUR', assetClass: 'cash', instrument: 'cash', quantity: 8450, price: 1, changePct: 0 },
   // Ledger
   { id: 'ledger-btc', sourceId: 'ledger', symbol: 'BTC', name: 'Bitcoin', assetClass: 'crypto', instrument: 'coin', quantity: 0.4215, price: 88_350, changePct: 1.92 },
   // MetaMask
   { id: 'metamask-eth', sourceId: 'metamask', symbol: 'ETH', name: 'Ethereum', assetClass: 'crypto', instrument: 'coin', quantity: 3.82, price: 3_120.4, changePct: -1.24 },
-  { id: 'metamask-usdc', sourceId: 'metamask', symbol: 'USDC', name: 'USD Coin', assetClass: 'cash', instrument: 'stablecoin', quantity: 2_400, price: 0.92, changePct: 0 },
   // Binance
   { id: 'binance-sol', sourceId: 'binance', symbol: 'SOL', name: 'Solana', assetClass: 'crypto', instrument: 'coin', quantity: 46.5, price: 148.7, changePct: 4.11 },
   { id: 'binance-btc', sourceId: 'binance', symbol: 'BTC', name: 'Bitcoin', assetClass: 'crypto', instrument: 'coin', quantity: 0.085, price: 88_350, changePct: 1.92 },
