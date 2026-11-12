@@ -44,3 +44,6 @@ example
 
 # ephemeral Expo Go tunnel QR
 screenshots/expo-qr.png
+
+# local env (API URL)
+.env

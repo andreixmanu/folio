@@ -1,0 +1,10 @@
+# Local development only for now: `npm run dev` (wrangler dev). No deploy, no account needed.
+name = "folio-api"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+workers_dev = false
+send_metrics = false
+
+[dev]
+port = 8787
+ip = "0.0.0.0"

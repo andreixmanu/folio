@@ -38,3 +38,17 @@ describe('<SegmentedControl />', () => {
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('<LiveIndicator />', () => {
+  const { LiveIndicator } = jest.requireActual('@/components/ui/live-indicator') as typeof import('@/components/ui/live-indicator');
+  const t = new Date(2026, 10, 12, 17, 52, 30).getTime();
+
+  test.each([
+    ['live', /^Live · 17:52:30, prezzi Kraken$/],
+    ['stale', /^Offline · 17:52:30$/],
+    ['error', /^Prezzi non disponibili$/],
+  ] as const)('%s', async (status, label) => {
+    await renderWithProviders(<LiveIndicator status={status} updatedAt={t} />);
+    expect(screen.getByTestId('live-indicator').props.accessibilityLabel).toMatch(label);
+  });
+});

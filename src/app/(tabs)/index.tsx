@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 
 import {
+  ErrorState,
   IconButton,
   IslandCard,
   ProfileAvatar,
@@ -59,10 +60,21 @@ export default function PortfolioScreen() {
       />
       {portfolio.data ? (
         <>
-          <PortfolioHero totalValue={portfolio.data.totalValue} />
+          <PortfolioHero
+            totalValue={portfolio.data.totalValue}
+            status={portfolio.status}
+            pricesUpdatedAt={portfolio.pricesUpdatedAt}
+          />
           <AllocationCard snapshot={portfolio.data} />
           <HoldingsBySource snapshot={portfolio.data} />
         </>
+      ) : portfolio.status === 'error' ? (
+        <ErrorState
+          title="Prezzi non disponibili"
+          message={`Impossibile contattare il server dei prezzi. ${portfolio.error?.message ?? ''}`.trim()}
+          onRetry={() => void portfolio.refetch()}
+          testID="portfolio-error"
+        />
       ) : (
         <LoadingState />
       )}

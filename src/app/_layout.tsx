@@ -13,7 +13,7 @@ import * as SystemUI from 'expo-system-ui';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { createQueryClient } from '@/services/query-client';
+import { createQueryClient, useAppStateFocus } from '@/services/query-client';
 import { ThemeProvider, useTheme } from '@/theme';
 
 void SplashScreen.preventAutoHideAsync();
@@ -57,6 +57,7 @@ function AppShell() {
 
 export default function RootLayout() {
   const [queryClient] = useState(createQueryClient);
+  useAppStateFocus();
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,

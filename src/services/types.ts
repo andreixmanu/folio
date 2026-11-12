@@ -44,6 +44,8 @@ export type Holding = {
 
 export type PortfolioSnapshot = {
   baseCurrency: 'EUR';
+  /** Positions that could not be priced by any source (excluded from totals). */
+  unpriced: string[];
   totalValue: number;
   /** Daily change in base currency and percent. */
   dayChange: number;
@@ -86,10 +88,52 @@ export type NewsArticle = {
   publishedAt: string;
 };
 
-/** Contract every portfolio data source must implement (mock now, Worker later). */
-export interface PortfolioDataSource {
-  getSnapshot(): Promise<PortfolioSnapshot>;
-  getValueHistory(range: TimeRange): Promise<ValueHistory>;
+/** A position without market data: what you hold and where (quantities only). */
+export type Position = Omit<Holding, 'price' | 'value' | 'changePct'>;
+
+/** Where positions come from (mock now; IBKR Flex Query / wallets / a bank later). */
+export interface PositionsSource {
+  getSources(): Promise<Source[]>;
+  getPositions(): Promise<Position[]>;
+}
+
+export type PriceQuote = {
+  symbol: string;
+  /** Last price in EUR. */
+  price: number;
+  /** Daily change in percent (crypto: vs today's 00:00 UTC open on Kraken). */
+  changePct: number;
+};
+
+export type QuotesResult = {
+  source: string;
+  quotes: PriceQuote[];
+  /** Symbols this source could not price (candidates for a fallback source). */
+  unsupported: string[];
+  updatedAt: string;
+};
+
+export type PriceSeries = {
+  symbol: string;
+  /** Close prices; `t` in milliseconds since epoch, ascending. */
+  points: { t: number; close: number }[];
+};
+
+export type HistoryResult = {
+  source: string;
+  range: TimeRange;
+  series: PriceSeries[];
+  unsupported: string[];
+};
+
+/**
+ * Contract for any price provider (Kraken via the Worker today; OpenMarket or others as
+ * fallbacks later, see `withFallback`).
+ */
+export interface PriceSource {
+  readonly id: string;
+  getQuotes(symbols: string[], signal?: AbortSignal): Promise<QuotesResult>;
+  getHistory(symbols: string[], range: TimeRange, signal?: AbortSignal): Promise<HistoryResult>;
 }
 
 export interface NewsDataSource {

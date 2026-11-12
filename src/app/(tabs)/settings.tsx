@@ -23,13 +23,14 @@ type FutureSource = {
   subtitle: string;
   icon: React.ComponentProps<typeof IconBadge>['name'];
   color: string;
+  live?: boolean;
 };
 
 const FUTURE_SOURCES: FutureSource[] = [
   { key: 'ibkr', title: 'Interactive Brokers', subtitle: 'Flex Query · sola lettura', icon: 'business', color: '#D81F26' },
   { key: 'wallets', title: 'Wallet crypto', subtitle: 'Indirizzi on-chain (BTC, ETH, SOL)', icon: 'wallet', color: '#B98CFF' },
   { key: 'exchanges', title: 'Exchange', subtitle: 'API in sola lettura', icon: 'swap-horizontal', color: '#F0B90B' },
-  { key: 'prices', title: 'Prezzi', subtitle: 'CoinGecko e quotazioni di mercato', icon: 'pulse', color: '#2FD08A' },
+  { key: 'prices', title: 'Prezzi', subtitle: 'Crypto live da Kraken · azioni simulate', icon: 'pulse', color: '#2FD08A', live: true },
   { key: 'rss', title: 'Feed RSS', subtitle: 'Testate finanziarie e crypto', icon: 'logo-rss', color: '#FF8A4C' },
 ];
 
@@ -39,7 +40,7 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: 'system', label: 'Sistema' },
 ];
 
-function SoonBadge() {
+function SoonBadge({ live = false }: { live?: boolean }) {
   const theme = useTheme();
   return (
     <View
@@ -47,10 +48,10 @@ function SoonBadge() {
         paddingHorizontal: 7,
         paddingVertical: 2,
         borderRadius: theme.radii.pill,
-        backgroundColor: theme.colors.surfaceMuted,
+        backgroundColor: live ? theme.colors.positiveMuted : theme.colors.surfaceMuted,
       }}>
-      <AppText variant="micro" color="textSecondary">
-        PRESTO
+      <AppText variant="micro" color={live ? 'positive' : 'textSecondary'}>
+        {live ? 'LIVE' : 'PRESTO'}
       </AppText>
     </View>
   );
@@ -76,7 +77,7 @@ export default function SettingsScreen() {
               leading={<IconBadge name={s.icon} color={s.color} />}
               title={s.title}
               subtitle={s.subtitle}
-              accessory={<SoonBadge />}
+              accessory={<SoonBadge live={s.live} />}
               showChevron
               onPress={() => {}}
             />
