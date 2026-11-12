@@ -41,3 +41,6 @@ example
 # generated native folders
 /ios
 /android
+
+# ephemeral Expo Go tunnel QR
+screenshots/expo-qr.png
