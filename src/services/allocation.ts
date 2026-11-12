@@ -7,13 +7,12 @@ const CLASS_LABELS: Record<AssetClass, string> = {
   crypto: 'Crypto',
 };
 
-function toSlices(
-  entries: { key: string; label: string; value: number; color: string }[],
-): AllocationSlice[] {
+function toSlices(entries: Omit<AllocationSlice, 'percent'>[]): AllocationSlice[] {
   const total = entries.reduce((s, e) => s + e.value, 0);
   return entries
     .filter((e) => e.value > 0)
-    .sort((a, b) => b.value - a.value)
+    // Largest first; the aggregated "Altro" bucket always goes last.
+    .sort((a, b) => Number(a.key === 'other') - Number(b.key === 'other') || b.value - a.value)
     .map((e) => ({ ...e, percent: total > 0 ? (e.value / total) * 100 : 0 }));
 }
 
@@ -37,21 +36,35 @@ export function allocationByAsset(
   colors: ColorTokens,
   maxSlices = 6,
 ): AllocationSlice[] {
-  const bySymbol = new Map<string, { label: string; value: number }>();
+  const bySymbol = new Map<
+    string,
+    { label: string; value: number; assetClass: Holding['assetClass'] }
+  >();
   for (const h of holdings) {
     const prev = bySymbol.get(h.symbol);
-    bySymbol.set(h.symbol, { label: h.symbol, value: (prev?.value ?? 0) + h.value });
+    bySymbol.set(h.symbol, {
+      label: h.symbol,
+      value: (prev?.value ?? 0) + h.value,
+      assetClass: h.assetClass,
+    });
   }
   const sorted = [...bySymbol.entries()].sort((a, b) => b[1].value - a[1].value);
   const top = sorted.slice(0, maxSlices);
   const rest = sorted.slice(maxSlices).reduce((s, [, v]) => s + v.value, 0);
-  const entries = top.map(([key, v], i) => ({
+  const entries: Omit<AllocationSlice, 'percent'>[] = top.map(([key, v], i) => ({
     key,
     label: v.label,
     value: v.value,
     color: colors.chart[i % colors.chart.length]!,
+    asset: { symbol: key, assetClass: v.assetClass },
   }));
-  if (rest > 0) entries.push({ key: 'other', label: 'Altro', value: rest, color: colors.textTertiary });
+  if (rest > 0)
+    entries.push({
+      key: 'other',
+      label: 'Altro',
+      value: rest,
+      color: colors.textTertiary,
+    });
   return toSlices(entries);
 }
 

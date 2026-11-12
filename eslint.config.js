@@ -5,6 +5,6 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*', 'worker/**'],
+    ignores: ['dist/*', 'worker/**', 'scripts/asset-icons/**'],
   },
 ]);

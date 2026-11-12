@@ -5,12 +5,15 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// The Cloudflare Worker lives in ./worker with its own node_modules: keep Metro out of it.
+// The Cloudflare Worker (./worker) and the icon build tool (./scripts/asset-icons) have
+// their own node_modules: keep Metro out of them.
 const workerDir = path.resolve(__dirname, 'worker');
+const iconToolDir = path.resolve(__dirname, 'scripts/asset-icons');
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 config.resolver.blockList = [
   ...[].concat(config.resolver.blockList ?? []),
   new RegExp(`^${escape(workerDir)}\\/.*$`),
+  new RegExp(`^${escape(iconToolDir)}\\/.*$`),
 ];
 
 /**

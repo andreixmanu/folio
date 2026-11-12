@@ -74,6 +74,8 @@ export type AllocationSlice = {
   /** 0..100 */
   percent: number;
   color: string;
+  /** Set for per-asset slices: the asset symbol & class (used to show its logo). */
+  asset?: { symbol: string; assetClass: AssetClass };
 };
 
 export type NewsCategory = 'markets' | 'crypto';

@@ -73,7 +73,7 @@ export function HoldingsBySource({ snapshot }: { snapshot: PortfolioSnapshot }) 
             <Fragment key={h.id}>
               {i > 0 ? <RowSeparator /> : null}
               <ListRow
-                leading={<AssetAvatar symbol={h.symbol} />}
+                leading={<AssetAvatar symbol={h.symbol} assetClass={h.assetClass} />}
                 title={h.name}
                 subtitle={`${masked ? MASK : formatQuantity(h.quantity)} ${h.symbol}`}
                 value={masked ? MASK : formatMoney(h.value)}

@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import Animated from 'react-native-reanimated';
 
+import { AssetAvatar } from '@/components/ui/asset-avatar';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { AppText } from '@/components/ui/text';
 import { formatMoney, formatPercent, MASK } from '@/lib/format';
@@ -20,6 +21,7 @@ export function AllocationDonut({ slices, masked = false, radius = 56 }: Allocat
   const theme = useTheme();
   const [selected, setSelected] = useState(0);
   const current = slices[Math.min(selected, slices.length - 1)];
+  const withLogos = slices.some((s) => s.asset);
 
   const data = slices.map((s, i) => ({
     value: s.value,
@@ -29,7 +31,12 @@ export function AllocationDonut({ slices, masked = false, radius = 56 }: Allocat
   }));
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.md,
+      }}>
       <Animated.View entering={enterFade()}>
         <PieChart
           data={data}
@@ -72,7 +79,26 @@ export function AllocationDonut({ slices, masked = false, radius = 56 }: Allocat
               borderRadius: theme.radii.xs,
               backgroundColor: i === selected ? theme.colors.surfaceMuted : 'transparent',
             }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: s.color }} />
+            <View
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: s.color,
+              }}
+            />
+            {s.asset ? (
+              <AssetAvatar symbol={s.asset.symbol} assetClass={s.asset.assetClass} size={22} />
+            ) : withLogos ? (
+              <View
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 11,
+                  backgroundColor: theme.colors.surfaceMuted,
+                }}
+              />
+            ) : null}
             <View style={{ flex: 1 }}>
               <AppText variant="caption" numberOfLines={1}>
                 {s.label}

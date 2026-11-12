@@ -69,10 +69,12 @@
     "resolver": "react-native-reanimated/jest/resolver",
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "<rootDir>/worker/"
+      "<rootDir>/worker/",
+      "<rootDir>/scripts/"
     ],
     "modulePathIgnorePatterns": [
-      "<rootDir>/worker/"
+      "<rootDir>/worker/",
+      "<rootDir>/scripts/"
     ]
   }
 }

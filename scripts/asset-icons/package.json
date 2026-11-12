@@ -1,0 +1,13 @@
+{
+  "name": "folio-asset-icons",
+  "private": true,
+  "type": "module",
+  "description": "Builds bundled circular asset icons (PNG) for Folio",
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": {
+    "@web3icons/core": "4.0.59",
+    "cryptocurrency-icons": "0.18.1",
+    "sharp": "^0.34.0",
+    "simple-icons": "^16.0.0"
+  }
+}

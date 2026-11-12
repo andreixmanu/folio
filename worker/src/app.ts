@@ -3,15 +3,19 @@ import { cors } from 'hono/cors';
 
 import { TtlCache } from './cache';
 import { fetchQuotes, fetchSeries, KrakenError, type Fetcher } from './kraken';
+import { defaultFetchLogo, logoUrl, normalizeLogoSymbol, type BinaryFetcher } from './logos';
 import { parseRange, RANGE_SPECS } from './ranges';
 import { parseSymbols } from './symbols';
 
 const TICKER_TTL_SEC = 30;
+const LOGO_TTL_SEC = 7 * 86_400;
+const LOGO_MISS_TTL_SEC = 86_400;
 
 export type AppDeps = {
   fetchJson?: Fetcher;
   now?: () => number;
   cache?: TtlCache;
+  fetchLogo?: BinaryFetcher;
 };
 
 async function defaultFetchJson(url: string): Promise<unknown> {
@@ -24,6 +28,7 @@ export function createApp(deps: AppDeps = {}) {
   const now = deps.now ?? (() => Date.now());
   const cache = deps.cache ?? new TtlCache(now);
   const rawFetch = deps.fetchJson ?? defaultFetchJson;
+  const fetchLogo = deps.fetchLogo ?? defaultFetchLogo;
 
   const app = new Hono();
 
@@ -37,7 +42,7 @@ export function createApp(deps: AppDeps = {}) {
     return c.json({ error: err.message || 'Internal error' }, status as 500);
   });
 
-  app.get('/', (c) => c.json({ name: 'folio-api', endpoints: ['/health', '/prices', '/history'] }));
+  app.get('/', (c) => c.json({ name: 'folio-api', endpoints: ['/health', '/prices', '/history', '/logo/:symbol'] }));
   app.get('/health', (c) => c.json({ ok: true, time: new Date(now()).toISOString() }));
 
   /** GET /prices?symbols=BTC,ETH */
@@ -86,6 +91,21 @@ export function createApp(deps: AppDeps = {}) {
       updatedAt: new Date(now()).toISOString(),
       series,
       unsupported,
+    });
+  });
+
+  /** GET /logo/AAPL — stock/ETF logo (PNG), cached for a week. */
+  app.get('/logo/:symbol', async (c) => {
+    const symbol = normalizeLogoSymbol(c.req.param('symbol'));
+    if (!symbol) return c.json({ error: 'Invalid symbol' }, 400);
+    const logo = await cache.get(`logo:${symbol}`, LOGO_TTL_SEC * 1000, () => fetchLogo(logoUrl(symbol)));
+    if (!logo) {
+      c.header('Cache-Control', `public, max-age=${LOGO_MISS_TTL_SEC}`);
+      return c.json({ error: `No logo for ${symbol}` }, 404);
+    }
+    return c.body(logo.body, 200, {
+      'Content-Type': logo.contentType,
+      'Cache-Control': `public, max-age=${LOGO_TTL_SEC}, immutable`,
     });
   });
 
