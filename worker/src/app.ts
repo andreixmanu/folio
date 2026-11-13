@@ -2,10 +2,13 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
 import { TtlCache } from './cache';
+import { handleChat } from './chat';
+import type { Env } from './env';
 import { fetchQuotes, fetchSeries, KrakenError, type Fetcher } from './kraken';
 import { defaultFetchLogo, logoUrl, normalizeLogoSymbol, type BinaryFetcher } from './logos';
 import { parseRange, RANGE_SPECS } from './ranges';
 import { parseSymbols } from './symbols';
+import type { XaiFetcher } from './xai-auth';
 
 const TICKER_TTL_SEC = 30;
 const LOGO_TTL_SEC = 7 * 86_400;
@@ -16,6 +19,9 @@ export type AppDeps = {
   now?: () => number;
   cache?: TtlCache;
   fetchLogo?: BinaryFetcher;
+  /** xAI token refresh and `POST /v1/responses`. Tests inject this so nothing hits the network. */
+  fetchUpstream?: XaiFetcher;
+  sleep?: (ms: number) => Promise<void>;
 };
 
 async function defaultFetchJson(url: string): Promise<unknown> {
@@ -29,12 +35,19 @@ export function createApp(deps: AppDeps = {}) {
   const cache = deps.cache ?? new TtlCache(now);
   const rawFetch = deps.fetchJson ?? defaultFetchJson;
   const fetchLogo = deps.fetchLogo ?? defaultFetchLogo;
+  const fetchUpstream = deps.fetchUpstream;
+  const sleep = deps.sleep;
 
-  const app = new Hono();
+  const app = new Hono<{ Bindings: Env }>();
 
   app.use(
     '*',
-    cors({ origin: '*', allowMethods: ['GET', 'OPTIONS'], maxAge: 86_400 }),
+    cors({
+      origin: '*',
+      allowMethods: ['GET', 'POST', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'X-Folio-Token'],
+      maxAge: 86_400,
+    }),
   );
 
   app.onError((err, c) => {
@@ -42,7 +55,9 @@ export function createApp(deps: AppDeps = {}) {
     return c.json({ error: err.message || 'Internal error' }, status as 500);
   });
 
-  app.get('/', (c) => c.json({ name: 'folio-api', endpoints: ['/health', '/prices', '/history', '/logo/:symbol'] }));
+  app.get('/', (c) =>
+    c.json({ name: 'folio-api', endpoints: ['/health', '/prices', '/history', '/logo/:symbol', '/chat'] }),
+  );
   app.get('/health', (c) => c.json({ ok: true, time: new Date(now()).toISOString() }));
 
   /** GET /prices?symbols=BTC,ETH */
@@ -106,6 +121,16 @@ export function createApp(deps: AppDeps = {}) {
     return c.body(logo.body, 200, {
       'Content-Type': logo.contentType,
       'Cache-Control': `public, max-age=${LOGO_TTL_SEC}, immutable`,
+    });
+  });
+
+  /** POST /chat — markets assistant. Auth and upstream calls are injectable via `deps`. */
+  app.post('/chat', async (c) => {
+    const raw = await c.req.text();
+    return handleChat(c.env, c.req.header('X-Folio-Token') ?? '', raw, {
+      now,
+      fetch: fetchUpstream,
+      sleep,
     });
   });
 

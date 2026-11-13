@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "wrangler dev",
+    "login:xai": "node scripts/xai-login.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

@@ -8,3 +8,12 @@ send_metrics = false
 [dev]
 port = 8787
 ip = "0.0.0.0"
+
+# Placeholder id is enough for `wrangler dev` and local KV (`--local`).
+# A real namespace id is needed only for a future deploy.
+[[kv_namespaces]]
+binding = "XAI_AUTH"
+id = "folio-xai-auth-local"
+
+[vars]
+XAI_MODEL = "grok-4.7"
