@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, Platform, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { AppText, PressableScale } from '@/components/ui';
@@ -111,10 +111,15 @@ export function MessageList({
   messages,
   typingId,
   onRetry,
+  keyboardVisible = false,
+  keyboardHeight = 0,
 }: {
   messages: ChatMessage[];
   typingId?: string;
   onRetry: () => void;
+  /** When the keyboard opens or its overlap changes, keep the latest message in view. */
+  keyboardVisible?: boolean;
+  keyboardHeight?: number;
 }) {
   const theme = useTheme();
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -123,16 +128,28 @@ export function MessageList({
     listRef.current?.scrollToEnd({ animated: true });
   }, [messages, typingId]);
 
+  useEffect(() => {
+    if (!keyboardVisible) return;
+    const frame = requestAnimationFrame(() => {
+      listRef.current?.scrollToEnd({ animated: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [keyboardVisible, keyboardHeight]);
+
   return (
     <FlatList
       ref={listRef}
       data={messages}
       keyExtractor={(item) => item.id}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       showsVerticalScrollIndicator={false}
       style={{ flex: 1 }}
       contentContainerStyle={{ gap: theme.spacing.sm, paddingBottom: theme.spacing.sm }}
       onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+      onLayout={() => {
+        if (keyboardVisible) listRef.current?.scrollToEnd({ animated: true });
+      }}
       renderItem={({ item }) => (
         <MessageRow message={item} typing={item.id === typingId} onRetry={onRetry} />
       )}

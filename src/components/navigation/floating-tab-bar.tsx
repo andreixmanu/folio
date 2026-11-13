@@ -66,8 +66,8 @@ function TabItem({
 export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, insets }: BottomTabBarProps) {
   const theme = useTheme();
   const keyboardVisible = useKeyboardVisible();
-  // Android resizes the window under the keyboard, which would lift this absolute
-  // bar up over the composer. Fade it out (no spring) until the keyboard closes.
+  // Edge-to-edge Android does not resize the window for the keyboard, so this
+  // absolute bar would sit under it. Fade it out (no spring) until the keyboard closes.
   const hideForKeyboard = Platform.OS === 'android' && keyboardVisible;
   const [barWidth, setBarWidth] = useState(0);
   const count = state.routes.length;

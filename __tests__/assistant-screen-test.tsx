@@ -1,12 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { fetch as expoFetch } from 'expo/fetch';
+import { Dimensions, Keyboard, Platform, type KeyboardEvent } from 'react-native';
 
 import AssistantScreen from '@/app/(tabs)/assistant';
 import { buildPortfolioContext } from '@/services/chat/context';
 import { useChatStore } from '@/services/chat/store';
 import type { PortfolioSnapshot } from '@/services/types';
 import { useUiStore } from '@/store/ui-store';
+import { layout } from '@/theme/spacing';
 
 import { renderWithProviders } from '../test/test-utils';
 
@@ -198,6 +200,62 @@ describe('Assistant screen', () => {
     await fireEvent.press(screen.getByTestId('suggestion-2'));
     expect(await screen.findByText(/npm run login:xai/)).toBeTruthy();
     expect(screen.getByText('Riprova')).toBeTruthy();
+  });
+
+  test('lifts the composer above the Android keyboard and restores tab clearance', async () => {
+    const originalOS = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true, writable: true });
+    const listeners = new Map<string, (event: KeyboardEvent) => void>();
+    const spy = jest.spyOn(Keyboard, 'addListener').mockImplementation((eventName, listener) => {
+      listeners.set(eventName, listener as (event: KeyboardEvent) => void);
+      return { remove: jest.fn() };
+    });
+
+    try {
+      await renderWithProviders(<AssistantScreen />);
+      const tabClearance = layout.tabBarHeight + layout.tabBarBottomGap;
+      const heightOf = () => {
+        const style = screen.getByTestId('assistant-bottom-spacer').props.style as { height?: number };
+        return style.height ?? 0;
+      };
+      expect(heightOf()).toBe(tabClearance);
+
+      const windowHeight = Dimensions.get('window').height;
+      const show = listeners.get('keyboardDidShow');
+      expect(show).toBeDefined();
+      await act(() => {
+        show?.({
+          duration: 0,
+          easing: 'keyboard',
+          endCoordinates: {
+            screenX: 0,
+            screenY: windowHeight - 300,
+            width: 400,
+            height: 300,
+          },
+        });
+      });
+      expect(heightOf()).toBeGreaterThanOrEqual(300);
+
+      const hide = listeners.get('keyboardDidHide');
+      expect(hide).toBeDefined();
+      await act(() => {
+        hide?.({
+          duration: 0,
+          easing: 'keyboard',
+          endCoordinates: {
+            screenX: 0,
+            screenY: windowHeight,
+            width: 400,
+            height: 0,
+          },
+        });
+      });
+      expect(heightOf()).toBe(tabClearance);
+    } finally {
+      spy.mockRestore();
+      Object.defineProperty(Platform, 'OS', { value: originalOS, configurable: true, writable: true });
+    }
   });
 
   test('Nuova chat clears the conversation', async () => {
