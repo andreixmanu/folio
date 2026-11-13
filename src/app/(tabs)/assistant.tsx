@@ -1,6 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedKeyboard,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, IconButton, ScreenHeader } from '@/components/ui';
@@ -29,6 +36,41 @@ function AssistantBottomSpacer({ height, duration }: { height: number; duration:
   return <IosKeyboardSpacer height={height} duration={duration} />;
 }
 
+/**
+ * Android belt for the event inset.
+ *
+ * `useAnimatedKeyboard` reads `WindowInsets`. With edge-to-edge,
+ * `Keyboard.updateHeight` zeroes the system-bar subtraction
+ * (`isNavigationBarTranslucent` comes from `isEdgeToEdge()`), so `height` is
+ * `ime.bottom`: from the physical bottom of the screen, navigation bar
+ * included. The RN `keyboardDidShow` height excludes that bar and its
+ * `screenY` is easy to misread against `Dimensions` window. The spacer uses
+ * the larger of the two. iOS and web stay on the event inset.
+ */
+function AndroidKeyboardBoost({
+  eventHeight,
+  onHeight,
+}: {
+  eventHeight: number;
+  onHeight: (height: number) => void;
+}) {
+  const keyboard = useAnimatedKeyboard();
+  const eventHeightSv = useSharedValue(eventHeight);
+
+  useEffect(() => {
+    eventHeightSv.set(eventHeight);
+  }, [eventHeight, eventHeightSv]);
+
+  useAnimatedReaction(
+    () => Math.max(keyboard.height.get(), eventHeightSv.get()),
+    (height, previous) => {
+      if (height !== previous) scheduleOnRN(onHeight, height);
+    },
+  );
+
+  return null;
+}
+
 function IosKeyboardSpacer({ height, duration }: { height: number; duration: number }) {
   const animatedHeight = useSharedValue(height);
 
@@ -52,6 +94,10 @@ export default function AssistantScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const keyboard = useKeyboardInset();
+  const [reanimatedCovered, setReanimatedCovered] = useState(0);
+  const onReanimatedCovered = useCallback((height: number) => {
+    setReanimatedCovered((prev) => (prev === height ? prev : height));
+  }, []);
   const snapshot = usePortfolio().data;
   const messages = useChatStore((s) => s.messages);
   const status = useChatStore((s) => s.status);
@@ -86,18 +132,27 @@ export default function AssistantScreen() {
   // Expo SDK 58 / RN 0.88 is edge-to-edge on Android, including Expo Go.
   // app.json does not set `softwareKeyboardLayoutMode`, and with edge-to-edge
   // the window is not resized for the keyboard (`adjustResize` has no effect).
-  // KeyboardAvoidingView therefore cannot lift this screen. Pad by the measured
-  // overlap instead. That overlap already covers the nav bar / home indicator,
-  // so do not add `insets.bottom` again — unless the measured gap would be
-  // smaller than the inset plus a little breathing room.
+  // KeyboardAvoidingView therefore cannot lift this screen. `keyboard.height`
+  // is already the distance from the bottom of this root view to the top of
+  // the keyboard (nav bar included). On Android the Reanimated inset is the
+  // same distance when it is larger (see AndroidKeyboardBoost). The open
+  // spacer is that distance plus `spacing.sm` — do not add the tab bar or
+  // insets again. Nothing else on this screen pads the bottom (no Screen,
+  // SafeAreaView, or scene padding).
   const keyboardOpen = keyboard.visible && Platform.OS !== 'web';
+  // Ignore a leftover Reanimated sample once the event says the keyboard is closed.
+  const covered =
+    Platform.OS === 'android' && keyboardOpen
+      ? Math.max(keyboard.height, reanimatedCovered)
+      : keyboard.height;
   const tabClearance = insets.bottom + theme.layout.tabBarHeight + theme.layout.tabBarBottomGap;
-  const bottomGap = keyboardOpen
-    ? Math.max(keyboard.height + theme.spacing.sm, insets.bottom + theme.spacing.sm)
-    : tabClearance;
+  const bottomGap = keyboardOpen ? covered + theme.spacing.sm : tabClearance;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }} testID="assistant-screen">
+      {Platform.OS === 'android' ? (
+        <AndroidKeyboardBoost eventHeight={keyboard.height} onHeight={onReanimatedCovered} />
+      ) : null}
       <View
         style={{
           flex: 1,

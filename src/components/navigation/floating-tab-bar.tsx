@@ -98,84 +98,90 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
   };
 
   return (
-    <Animated.View
+    // The fade animates opacity only. `position` / `bottom` stay on a plain View
+    // so a Reanimated style update cannot drop them and pin the bar at the top.
+    <View
       pointerEvents={hideForKeyboard ? 'none' : 'box-none'}
-      style={[
-        {
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: insets.bottom + theme.layout.tabBarBottomGap,
-          alignItems: 'center',
-          paddingHorizontal: theme.layout.tabBarSideInset,
-        },
-        barStyle,
-      ]}>
-      <View
-        accessibilityRole="tablist"
-        onLayout={onLayout}
-        style={[
-          {
-            width: '100%',
-            maxWidth: 420,
-            height: theme.layout.tabBarHeight,
-            flexDirection: 'row',
-            padding: INNER_PAD,
-            borderRadius: theme.radii.pill,
-            backgroundColor: theme.colors.surfaceElevated,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-          },
-          theme.elevation(3),
-        ]}>
-        {itemWidth > 0 ? (
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              {
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: insets.bottom + theme.layout.tabBarBottomGap,
+        alignItems: 'center',
+        paddingHorizontal: theme.layout.tabBarSideInset,
+      }}>
+      <Animated.View style={[{ alignSelf: 'stretch', alignItems: 'center' }, barStyle]}>
+        <View
+          accessibilityRole="tablist"
+          onLayout={onLayout}
+          style={[
+            {
+              width: '100%',
+              maxWidth: 420,
+              height: theme.layout.tabBarHeight,
+              flexDirection: 'row',
+              padding: INNER_PAD,
+              borderRadius: theme.radii.pill,
+              backgroundColor: theme.colors.surfaceElevated,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+            },
+            theme.elevation(3),
+          ]}>
+          {itemWidth > 0 ? (
+            <View
+              pointerEvents="none"
+              style={{
                 position: 'absolute',
                 top: INNER_PAD,
                 bottom: INNER_PAD,
                 left: INNER_PAD,
                 width: itemWidth,
-                borderRadius: theme.radii.pill,
-                backgroundColor: theme.colors.surfaceMuted,
-              },
-              indicatorStyle,
-            ]}
-          />
-        ) : null}
-        {state.routes.map((route, index) => {
-          const descriptor = descriptors[route.key];
-          if (!descriptor) return null;
-          const { options } = descriptor;
-          const focused = index === state.index;
-          const label = options.title ?? route.name;
-          const color = focused ? theme.colors.text : theme.colors.textSecondary;
+              }}>
+              <Animated.View
+                style={[
+                  {
+                    flex: 1,
+                    borderRadius: theme.radii.pill,
+                    backgroundColor: theme.colors.surfaceMuted,
+                  },
+                  indicatorStyle,
+                ]}
+              />
+            </View>
+          ) : null}
+          {state.routes.map((route, index) => {
+            const descriptor = descriptors[route.key];
+            if (!descriptor) return null;
+            const { options } = descriptor;
+            const focused = index === state.index;
+            const label = options.title ?? route.name;
+            const color = focused ? theme.colors.text : theme.colors.textSecondary;
 
-          return (
-            <TabItem
-              key={route.key}
-              label={label}
-              focused={focused}
-              testID={options.tabBarButtonTestID}
-              icon={options.tabBarIcon?.({ focused, color, size: 22 })}
-              onPress={() => {
-                const event = emitter.emit({
-                  type: 'tabPress',
-                  target: route.key,
-                  canPreventDefault: true,
-                });
-                if (!focused && !event.defaultPrevented) {
-                  haptics.selection();
-                  navigateToTab(route.key);
-                }
-              }}
-              onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}
-            />
-          );
-        })}
-      </View>
-    </Animated.View>
+            return (
+              <TabItem
+                key={route.key}
+                label={label}
+                focused={focused}
+                testID={options.tabBarButtonTestID}
+                icon={options.tabBarIcon?.({ focused, color, size: 22 })}
+                onPress={() => {
+                  const event = emitter.emit({
+                    type: 'tabPress',
+                    target: route.key,
+                    canPreventDefault: true,
+                  });
+                  if (!focused && !event.defaultPrevented) {
+                    haptics.selection();
+                    navigateToTab(route.key);
+                  }
+                }}
+                onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}
+              />
+            );
+          })}
+        </View>
+      </Animated.View>
+    </View>
   );
 }

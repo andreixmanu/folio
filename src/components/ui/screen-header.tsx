@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps, ReactNode } from 'react';
-import { View } from 'react-native';
+import { Platform, View, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { enterFade, useTheme } from '@/theme';
@@ -18,16 +18,18 @@ export type ScreenHeaderProps = {
 /** Large-title header in the Revolut style. */
 export function ScreenHeader({ title, eyebrow, right }: ScreenHeaderProps) {
   const theme = useTheme();
-  return (
-    <Animated.View
-      entering={enterFade()}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        paddingTop: theme.spacing.xs,
-        paddingBottom: theme.spacing.xs,
-      }}>
+  const headerStyle: ViewStyle = {
+    // Stay in normal flow. An entering animation must not leave this row absolute.
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    alignSelf: 'stretch',
+    justifyContent: 'space-between',
+    paddingTop: theme.spacing.xs,
+    paddingBottom: theme.spacing.xs,
+  };
+  const body = (
+    <>
       <View style={{ flex: 1, gap: 2 }}>
         {eyebrow ? (
           <AppText variant="caption" color="textSecondary">
@@ -38,7 +40,33 @@ export function ScreenHeader({ title, eyebrow, right }: ScreenHeaderProps) {
           {title}
         </AppText>
       </View>
-      {right ? <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>{right}</View> : null}
+      {right ? (
+        <View
+          style={{
+            // The 36px action is a flex sibling of the title, never taken out of flow.
+            position: 'relative',
+            flexDirection: 'row',
+            flexShrink: 0,
+            gap: theme.spacing.sm,
+          }}>
+          {right}
+        </View>
+      ) : null}
+    </>
+  );
+
+  // On Android, Reanimated `entering` (FadeIn / Keyframe) can leave the animated
+  // node — and an animated descendant such as IconButton's Pressable — at
+  // `position: 'absolute'` with the default origin. That paints the 36px surface
+  // circle over the title. News and settings use this same header with no right
+  // slot; skipping the entrance on Android keeps every tab's title in flow.
+  if (Platform.OS === 'android') {
+    return <View style={headerStyle}>{body}</View>;
+  }
+
+  return (
+    <Animated.View entering={enterFade()} style={headerStyle}>
+      {body}
     </Animated.View>
   );
 }
@@ -65,6 +93,7 @@ export function IconButton({
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       style={{
+        position: 'relative',
         width: 36,
         height: 36,
         borderRadius: 18,

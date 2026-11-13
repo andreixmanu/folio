@@ -8,7 +8,7 @@ import { buildPortfolioContext } from '@/services/chat/context';
 import { useChatStore } from '@/services/chat/store';
 import type { PortfolioSnapshot } from '@/services/types';
 import { useUiStore } from '@/store/ui-store';
-import { layout } from '@/theme/spacing';
+import { layout, spacing } from '@/theme/spacing';
 
 import { renderWithProviders } from '../test/test-utils';
 
@@ -18,9 +18,13 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 
 jest.mock('expo/fetch', () => ({ fetch: jest.fn() }));
 
+const safeArea = { top: 0, bottom: 0, left: 0, right: 0 };
+
 jest.mock('react-native-safe-area-context', () => {
-  const actual = jest.requireActual('react-native-safe-area-context');
-  return { ...actual, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) };
+  const actual = jest.requireActual<typeof import('react-native-safe-area-context')>(
+    'react-native-safe-area-context',
+  );
+  return { ...actual, useSafeAreaInsets: () => safeArea };
 });
 
 const mockPortfolio: PortfolioSnapshot = {
@@ -104,6 +108,10 @@ describe('Assistant screen', () => {
   beforeEach(async () => {
     process.env.EXPO_PUBLIC_API_URL = 'https://folio.test/api';
     process.env.EXPO_PUBLIC_CHAT_TOKEN = 'test-token';
+    safeArea.top = 0;
+    safeArea.bottom = 0;
+    safeArea.left = 0;
+    safeArea.right = 0;
     useUiStore.setState({ hideBalances: false });
     fetchMock.mockReset();
     await AsyncStorage.clear();
@@ -205,6 +213,16 @@ describe('Assistant screen', () => {
   test('lifts the composer above the Android keyboard and restores tab clearance', async () => {
     const originalOS = Platform.OS;
     Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true, writable: true });
+    // Edge-to-edge: the window is shorter than the screen by the status + nav bars.
+    // The covered height must still be 328 (keyboard 280 + nav inset 48), not the
+    // undershooting window-based overlap.
+    const screenH = 800;
+    const windowH = screenH - 72;
+    safeArea.bottom = 48;
+    const dimensionsSpy = jest.spyOn(Dimensions, 'get').mockImplementation((dim) => {
+      if (dim === 'screen') return { width: 400, height: screenH, scale: 2, fontScale: 1 };
+      return { width: 400, height: windowH, scale: 2, fontScale: 1 };
+    });
     const listeners = new Map<string, (event: KeyboardEvent) => void>();
     const spy = jest.spyOn(Keyboard, 'addListener').mockImplementation((eventName, listener) => {
       listeners.set(eventName, listener as (event: KeyboardEvent) => void);
@@ -213,14 +231,13 @@ describe('Assistant screen', () => {
 
     try {
       await renderWithProviders(<AssistantScreen />);
-      const tabClearance = layout.tabBarHeight + layout.tabBarBottomGap;
+      const tabClearance = safeArea.bottom + layout.tabBarHeight + layout.tabBarBottomGap;
       const heightOf = () => {
         const style = screen.getByTestId('assistant-bottom-spacer').props.style as { height?: number };
         return style.height ?? 0;
       };
       expect(heightOf()).toBe(tabClearance);
 
-      const windowHeight = Dimensions.get('window').height;
       const show = listeners.get('keyboardDidShow');
       expect(show).toBeDefined();
       await act(() => {
@@ -229,13 +246,13 @@ describe('Assistant screen', () => {
           easing: 'keyboard',
           endCoordinates: {
             screenX: 0,
-            screenY: windowHeight - 300,
+            screenY: screenH - 328,
             width: 400,
-            height: 300,
+            height: 280,
           },
         });
       });
-      expect(heightOf()).toBeGreaterThanOrEqual(300);
+      expect(heightOf()).toBe(328 + spacing.sm);
 
       const hide = listeners.get('keyboardDidHide');
       expect(hide).toBeDefined();
@@ -245,7 +262,7 @@ describe('Assistant screen', () => {
           easing: 'keyboard',
           endCoordinates: {
             screenX: 0,
-            screenY: windowHeight,
+            screenY: screenH,
             width: 400,
             height: 0,
           },
@@ -254,6 +271,8 @@ describe('Assistant screen', () => {
       expect(heightOf()).toBe(tabClearance);
     } finally {
       spy.mockRestore();
+      dimensionsSpy.mockRestore();
+      safeArea.bottom = 0;
       Object.defineProperty(Platform, 'OS', { value: originalOS, configurable: true, writable: true });
     }
   });
