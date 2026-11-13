@@ -174,6 +174,29 @@ describe('POST /chat', () => {
           ],
         },
       },
+      { messages, portfolio: { totalValue: null, currency: 'EUR', holdings: [] } },
+      { messages, portfolio: { totalValue: '1000', currency: 'EUR', holdings: [] } },
+      {
+        messages,
+        portfolio: {
+          currency: 'EUR',
+          holdings: [{ symbol: 'BTC', name: 'Bitcoin', assetClass: 'crypto', weightPct: 100, quantity: null }],
+        },
+      },
+      {
+        messages,
+        portfolio: {
+          currency: 'EUR',
+          holdings: [{ symbol: 'BTC', name: 'Bitcoin', assetClass: 'crypto', weightPct: 100, value: '1' }],
+        },
+      },
+      {
+        messages,
+        portfolio: {
+          currency: 'EUR',
+          holdings: [{ symbol: 'BTC', name: 'Bitcoin', assetClass: 'crypto' }],
+        },
+      },
     ];
     for (const body of cases) {
       const res = await post(app, env, body, APP_TOKEN);
@@ -232,6 +255,7 @@ describe('POST /chat', () => {
       expect(payload.input[0]?.role).toBe('system');
       expect(payload.input[0]?.content).toContain('Folio Assistente');
       expect(payload.input[0]?.content).toContain('Data di oggi: 2026-11-13.');
+      expect(payload.input[0]?.content).not.toContain('valori assoluti nascosti');
       expect(payload.input[0]?.content).toContain(JSON.stringify(portfolio));
       expect(payload.input[1]).toEqual(messages[0]);
       return chunkedSse(UPSTREAM_SSE);
@@ -252,6 +276,50 @@ describe('POST /chat', () => {
       sources: [{ title: 'Esempio', url: 'https://example.com/a' }],
     });
     expect(events[3]?.data).toEqual({});
+    expect(fetchUpstream).toHaveBeenCalledTimes(1);
+  });
+
+  test('streams a weights-only portfolio when absolute amounts are omitted', async () => {
+    const kv = new MemoryKv();
+    await seedAccess(kv);
+    const weightsOnly = {
+      currency: 'EUR',
+      holdings: [
+        {
+          symbol: 'VWCE',
+          name: 'Vanguard FTSE All-World',
+          assetClass: 'stocks',
+          weightPct: 60,
+          changePct: 1.26,
+        },
+        {
+          symbol: 'BTC',
+          name: 'Bitcoin',
+          assetClass: 'crypto',
+          weightPct: 40,
+        },
+      ],
+      allocation: [
+        { label: 'Azioni & ETF', percent: 60 },
+        { label: 'Crypto', percent: 40 },
+      ],
+    };
+    const fetchUpstream = vi.fn<XaiFetcher>(async (_url, init) => {
+      const payload = JSON.parse(String(init?.body)) as {
+        input: { role: string; content: string }[];
+      };
+      const system = payload.input[0]?.content ?? '';
+      expect(system).toContain('valori assoluti nascosti dall\'utente: usa solo i pesi');
+      expect(system).toContain(JSON.stringify(weightsOnly));
+      expect(system).not.toContain('totalValue');
+      return chunkedSse(UPSTREAM_SSE);
+    });
+    const app = createApp({ now: () => NOW, fetchUpstream, sleep: async () => {} });
+    const res = await post(app, envOf(kv), { messages, portfolio: weightsOnly }, APP_TOKEN);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('text/event-stream; charset=utf-8');
+    const events = parseEvents(await res.text());
+    expect(events.map((event) => event.event)).toEqual(['delta', 'delta', 'sources', 'done']);
     expect(fetchUpstream).toHaveBeenCalledTimes(1);
   });
 

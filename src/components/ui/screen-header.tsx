@@ -48,30 +48,33 @@ export function IconButton({
   name,
   onPress,
   accessibilityLabel,
+  disabled = false,
 }: {
   name: ComponentProps<typeof Ionicons>['name'];
   onPress?: () => void;
   accessibilityLabel: string;
+  disabled?: boolean;
 }) {
   const theme = useTheme();
   return (
     <PressableScale
       onPress={onPress}
+      disabled={disabled}
       haptic="selection"
       scaleTo={0.94}
       accessibilityLabel={accessibilityLabel}
-      style={[
-        {
-          width: 36,
-          height: 36,
-          borderRadius: 18,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: theme.colors.surface,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-        },
-      ]}>
+      accessibilityState={{ disabled }}
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.surface,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        opacity: disabled ? 0.4 : 1,
+      }}>
       <Ionicons name={name} size={18} color={theme.colors.text} />
     </PressableScale>
   );

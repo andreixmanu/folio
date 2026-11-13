@@ -26,6 +26,8 @@ config.server.enhanceMiddleware = (middleware, server) => {
   const next = previous ? previous(middleware, server) : middleware;
   return (req, res, fallthrough) => {
     if (!req.url || !req.url.startsWith('/api/')) return next(req, res, fallthrough);
+    // Small SSE writes should not wait for Nagle on the phone connection.
+    req.socket?.setNoDelay(true);
     const upstream = http.request(
       {
         hostname: WORKER_URL.hostname,
@@ -35,13 +37,37 @@ config.server.enhanceMiddleware = (middleware, server) => {
         headers: { ...req.headers, host: WORKER_URL.host },
       },
       (up) => {
-        res.writeHead(up.statusCode || 502, up.headers);
+        const headers = { ...up.headers };
+        const contentType = String(headers['content-type'] ?? '');
+        const streaming = contentType.includes('text/event-stream');
+        if (streaming) {
+          headers['x-accel-buffering'] = 'no';
+          // Worker sends `Cache-Control: no-transform`, which compression honours. Keep it.
+          if (!headers['cache-control']) headers['cache-control'] = 'no-cache, no-transform';
+          res.setHeader('X-Accel-Buffering', 'no');
+          res.setHeader('Cache-Control', headers['cache-control']);
+        }
+        res.writeHead(up.statusCode || 502, headers);
+        if (streaming) res.flushHeaders();
         up.pipe(res);
       },
     );
+    upstream.on('socket', (socket) => socket.setNoDelay(true));
     upstream.on('error', (err) => {
+      if (res.destroyed || res.writableEnded || res.headersSent) {
+        if (!res.writableEnded) res.destroy();
+        return;
+      }
       res.writeHead(502, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
       res.end(JSON.stringify({ error: `Worker non raggiungibile: ${err.message}` }));
+    });
+    // `req` 'close' also fires once the POST body has been read, before any SSE bytes.
+    // Destroy the upstream only when the client socket is actually gone.
+    req.on('close', () => {
+      if (req.socket?.destroyed) upstream.destroy();
+    });
+    res.on('close', () => {
+      if (!res.writableFinished) upstream.destroy();
     });
     req.pipe(upstream);
   };

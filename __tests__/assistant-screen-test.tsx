@@ -1,0 +1,214 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fetch as expoFetch } from 'expo/fetch';
+
+import AssistantScreen from '@/app/(tabs)/assistant';
+import { buildPortfolioContext } from '@/services/chat/context';
+import { useChatStore } from '@/services/chat/store';
+import type { PortfolioSnapshot } from '@/services/types';
+import { useUiStore } from '@/store/ui-store';
+
+import { renderWithProviders } from '../test/test-utils';
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
+jest.mock('expo/fetch', () => ({ fetch: jest.fn() }));
+
+jest.mock('react-native-safe-area-context', () => {
+  const actual = jest.requireActual('react-native-safe-area-context');
+  return { ...actual, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) };
+});
+
+const mockPortfolio: PortfolioSnapshot = {
+  baseCurrency: 'EUR',
+  totalValue: 1000,
+  dayChange: 10,
+  dayChangePct: 1,
+  unpriced: [],
+  updatedAt: '2026-11-13T00:00:00Z',
+  sources: [],
+  holdings: [
+    {
+      id: '1',
+      sourceId: 'ibkr',
+      symbol: 'VWCE',
+      name: 'Vanguard FTSE All-World',
+      assetClass: 'stocks',
+      instrument: 'etf',
+      quantity: 2,
+      price: 300,
+      value: 600,
+      changePct: 1.5,
+    },
+    {
+      id: '2',
+      sourceId: 'ledger',
+      symbol: 'BTC',
+      name: 'Bitcoin',
+      assetClass: 'crypto',
+      instrument: 'coin',
+      quantity: 0.4,
+      price: 1000,
+      value: 400,
+      changePct: -2,
+    },
+  ],
+};
+
+jest.mock('@/services/hooks', () => ({
+  usePortfolio: () => ({
+    data: mockPortfolio,
+    status: 'live' as const,
+    isRefetching: false,
+    refetch: jest.fn(),
+  }),
+}));
+
+const fetchMock = expoFetch as jest.MockedFunction<typeof expoFetch>;
+
+const SUGGESTION = "Com'è esposto il mio portafoglio sulla tech?";
+
+function sseBody(chunks: string[]) {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      const encoder = new TextEncoder();
+      for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+      controller.close();
+    },
+  });
+}
+
+function okStream(text: string) {
+  const payload = [
+    `event: delta\ndata: ${JSON.stringify({ text: text.slice(0, 4) })}\n\n`,
+    `event: delta\ndata: ${JSON.stringify({ text: text.slice(4) })}\n\n`,
+    'event: sources\ndata: {"sources":[{"title":"Kraken","url":"https://www.kraken.com/prices"}]}\n\n',
+    'event: done\ndata: {}\n\n',
+  ];
+  return {
+    ok: true,
+    status: 200,
+    body: sseBody(payload),
+    text: async () => payload.join(''),
+  };
+}
+
+describe('Assistant screen', () => {
+  const previousApi = process.env.EXPO_PUBLIC_API_URL;
+  const previousToken = process.env.EXPO_PUBLIC_CHAT_TOKEN;
+
+  beforeEach(async () => {
+    process.env.EXPO_PUBLIC_API_URL = 'https://folio.test/api';
+    process.env.EXPO_PUBLIC_CHAT_TOKEN = 'test-token';
+    useUiStore.setState({ hideBalances: false });
+    fetchMock.mockReset();
+    await AsyncStorage.clear();
+    useChatStore.getState().newChat();
+    await useChatStore.persist.clearStorage();
+    useChatStore.setState({ messages: [], status: 'idle' });
+  });
+
+  afterAll(() => {
+    process.env.EXPO_PUBLIC_API_URL = previousApi;
+    process.env.EXPO_PUBLIC_CHAT_TOKEN = previousToken;
+  });
+
+  test('shows suggestion chips and the disclaimer', async () => {
+    await renderWithProviders(<AssistantScreen />);
+    expect(screen.getByText('Chiedimi di mercati, ETF, crypto, macro o del tuo portafoglio.')).toBeTruthy();
+    expect(screen.getByText('Non è consulenza finanziaria.')).toBeTruthy();
+    expect(screen.getByTestId('suggestion-0')).toBeTruthy();
+    expect(screen.getByTestId('suggestion-1')).toBeTruthy();
+    expect(screen.getByTestId('suggestion-2')).toBeTruthy();
+    expect(screen.getByTestId('suggestion-3')).toBeTruthy();
+    expect(screen.getByText('Cosa muove BTC oggi?')).toBeTruthy();
+    expect(screen.getByText('Riassumi i rischi del mio portafoglio')).toBeTruthy();
+    expect(screen.getByText('Come stanno andando gli ETF azionari globali?')).toBeTruthy();
+    expect(screen.getByLabelText('Nuova chat').props.accessibilityState).toEqual({ disabled: true });
+  });
+
+  test('sends a suggestion with the portfolio context and renders the stream', async () => {
+    fetchMock.mockResolvedValue(okStream('Ciao mondo') as never);
+    await renderWithProviders(<AssistantScreen />);
+    await fireEvent.press(screen.getByTestId('suggestion-0'));
+
+    expect(await screen.findByText(/Ciao mondo/)).toBeTruthy();
+    expect(screen.getByText('kraken.com')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(String(url)).toBe('https://folio.test/api/chat');
+    const headers = init?.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBe('application/json');
+    expect(headers.Accept).toBe('text/event-stream');
+    expect(headers['X-Folio-Token']).toBe('test-token');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      messages: [{ role: 'user', content: SUGGESTION }],
+      portfolio: buildPortfolioContext(mockPortfolio, false),
+    });
+  });
+
+  test('shows a stop button while streaming and aborts on press', async () => {
+    let signal: AbortSignal | undefined;
+    fetchMock.mockImplementation((_url, init) => {
+      signal = init?.signal ?? undefined;
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const abort = () => {
+            const error = new Error('aborted');
+            error.name = 'AbortError';
+            try {
+              controller.error(error);
+            } catch {
+              /* already closed */
+            }
+          };
+          if (init?.signal?.aborted) abort();
+          else init?.signal?.addEventListener('abort', abort, { once: true });
+        },
+      });
+      return Promise.resolve({ ok: true, status: 200, body, text: async () => '' } as never);
+    });
+
+    await renderWithProviders(<AssistantScreen />);
+    await fireEvent.press(screen.getByTestId('suggestion-1'));
+    expect(await screen.findByTestId('chat-stop')).toBeTruthy();
+    expect(screen.queryByTestId('chat-send')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('chat-stop'));
+    await waitFor(() => expect(signal?.aborted).toBe(true));
+    await waitFor(() => expect(screen.queryByTestId('chat-stop')).toBeNull());
+    expect(screen.getByTestId('chat-send')).toBeTruthy();
+  });
+
+  test('shows the login_required error with Riprova', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 401,
+      body: null,
+      text: async () =>
+        JSON.stringify({
+          error: 'login_required',
+          message: 'Accesso xAI scaduto: rifai il login (npm run login:xai).',
+        }),
+    } as never);
+
+    await renderWithProviders(<AssistantScreen />);
+    await fireEvent.press(screen.getByTestId('suggestion-2'));
+    expect(await screen.findByText(/npm run login:xai/)).toBeTruthy();
+    expect(screen.getByText('Riprova')).toBeTruthy();
+  });
+
+  test('Nuova chat clears the conversation', async () => {
+    fetchMock.mockResolvedValue(okStream('Risposta breve') as never);
+    await renderWithProviders(<AssistantScreen />);
+    await fireEvent.press(screen.getByTestId('suggestion-3'));
+    expect(await screen.findByText(/Risposta breve/)).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText('Nuova chat'));
+    await waitFor(() => expect(screen.queryByText(/Risposta breve/)).toBeNull());
+    expect(screen.getByTestId('suggestion-0')).toBeTruthy();
+    expect(screen.getByText('Non è consulenza finanziaria.')).toBeTruthy();
+  });
+});

@@ -34,14 +34,17 @@ export type PortfolioHolding = {
   symbol: string;
   name: string;
   assetClass: string;
-  quantity: number;
-  value: number;
+  /** Omitted when the user hides balances. */
+  quantity?: number;
+  /** Omitted when the user hides balances. */
+  value?: number;
   weightPct: number;
   changePct?: number;
 };
 
 export type Portfolio = {
-  totalValue: number;
+  /** Omitted when the user hides balances; weights stay on each holding. */
+  totalValue?: number;
   currency: string;
   holdings: PortfolioHolding[];
   allocation?: { label: string; percent: number }[];
@@ -70,14 +73,19 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+/** Absent is fine. A present value must be a finite number (null, strings, NaN fail). */
+function isOptionalFiniteNumber(value: unknown): boolean {
+  return value === undefined || isFiniteNumber(value);
+}
+
 function portfolioOk(value: Record<string, unknown>): boolean {
-  if (!isFiniteNumber(value.totalValue) || typeof value.currency !== 'string') return false;
+  if (!isOptionalFiniteNumber(value.totalValue) || typeof value.currency !== 'string') return false;
   if (!Array.isArray(value.holdings)) return false;
   for (const holding of value.holdings) {
     if (!isRecord(holding)) return false;
     if (typeof holding.symbol !== 'string' || typeof holding.name !== 'string') return false;
     if (typeof holding.assetClass !== 'string') return false;
-    if (!isFiniteNumber(holding.quantity) || !isFiniteNumber(holding.value)) return false;
+    if (!isOptionalFiniteNumber(holding.quantity) || !isOptionalFiniteNumber(holding.value)) return false;
     if (!isFiniteNumber(holding.weightPct)) return false;
     if (holding.changePct !== undefined && !isFiniteNumber(holding.changePct)) return false;
   }
@@ -119,10 +127,14 @@ export function parseChatBody(raw: string): { ok: true; value: ChatRequest } | {
   return { ok: true, value: { messages, portfolio: parsed.portfolio as Portfolio } };
 }
 
+const HIDDEN_AMOUNTS_NOTE = 'valori assoluti nascosti dall\'utente: usa solo i pesi';
+
 export function buildSystemContent(nowMs: number, portfolio: Portfolio | undefined): string {
   const date = new Date(nowMs).toISOString().slice(0, 10);
   let content = `${SYSTEM_PROMPT} Data di oggi: ${date}.`;
-  if (portfolio) content += `\n${JSON.stringify(portfolio)}`;
+  if (!portfolio) return content;
+  if (portfolio.totalValue === undefined) content += `\n${HIDDEN_AMOUNTS_NOTE}`;
+  content += `\n${JSON.stringify(portfolio)}`;
   return content;
 }
 

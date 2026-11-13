@@ -27,7 +27,7 @@ and licence). `<AssetAvatar>` uses bundled icon → worker `/logo/:symbol` (stoc
 
 ```
 src/
-  app/                 Expo Router routes: (tabs)/index (Portfolio), news, settings
+  app/                 Expo Router routes: (tabs)/index (Portfolio), news, assistant, settings
   theme/               tokens: colors, spacing, radii, typography, motion, elevation + ThemeProvider
   components/ui/       IslandCard, ListRow, ChangeChip, SegmentedControl, FilterChips, AnimatedNumber, Screen…
   components/navigation/ FloatingTabBar (pill, detached, animated indicator)
@@ -39,3 +39,24 @@ src/
 ```
 
 Swap data sources in `src/services/sources.ts`; hooks and screens stay unchanged.
+
+## Assistente
+
+The Assistente tab is a markets-only chat. The app streams `POST /chat` on the Folio Worker
+(`text/event-stream`: `delta`, `sources`, `error`, `done`). The Worker calls xAI; the app never
+holds an xAI token. It sends `X-Folio-Token` and, when a portfolio is loaded, a compact snapshot
+(weights by holding, allocation by class). With **Nascondi saldi** on, quantities and euro amounts
+are left out of that payload. The Worker currently requires those numbers, so a hidden-balance
+turn is rejected as `invalid_body` until the check allows a weights-only portfolio.
+
+- `EXPO_PUBLIC_API_URL` — Worker base URL, or the Expo `/api` proxy in dev (see `.env.example`).
+- `EXPO_PUBLIC_CHAT_TOKEN` — must match `APP_CHAT_TOKEN` in `worker/.dev.vars`.
+
+```bash
+cd worker
+cp .dev.vars.example .dev.vars   # set APP_CHAT_TOKEN
+npm run login:xai                # device flow; prints a verification URL, then stores a refresh token locally
+```
+
+If the assistant replies that login is required, run `npm run login:xai` again from `worker/`.
+In dev, Metro proxies `/api/*` to the Worker and flushes `text/event-stream` without buffering.

@@ -83,6 +83,12 @@ export default function SettingsScreen() {
             />
           </Fragment>
         ))}
+        <RowSeparator />
+        <ListRow
+          leading={<IconBadge name="sparkles" color={theme.colors.accent} />}
+          title="Assistente"
+          subtitle="xAI · Grok"
+        />
       </IslandCard>
 
       <SectionTitle title="Preferenze" />

@@ -1,6 +1,6 @@
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useEffect, useState } from 'react';
-import { Pressable, View, type LayoutChangeEvent } from 'react-native';
+import { Platform, Pressable, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -9,6 +9,7 @@ import Animated, {
 
 import { AppText } from '@/components/ui/text';
 import { haptics } from '@/lib/haptics';
+import { useKeyboardVisible } from '@/lib/use-keyboard-visible';
 import { timings, useTheme } from '@/theme';
 
 const INNER_PAD = 6;
@@ -41,10 +42,16 @@ function TabItem({
       onLongPress={onLongPress}
       onPressIn={() => scale.set(withTiming(0.96, timings.pressIn))}
       onPressOut={() => scale.set(withTiming(1, timings.pressOut))}
-      style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.View style={[{ alignItems: 'center', gap: 2 }, style]}>
+      style={{ flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.View style={[{ alignItems: 'center', gap: 2, width: '100%' }, style]}>
         {icon}
-        <AppText variant="micro" color={focused ? 'text' : 'textSecondary'}>
+        <AppText
+          variant="micro"
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+          color={focused ? 'text' : 'textSecondary'}
+          style={{ width: '100%', textAlign: 'center', letterSpacing: 0 }}>
           {label}
         </AppText>
       </Animated.View>
@@ -58,17 +65,30 @@ function TabItem({
  */
 export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, insets }: BottomTabBarProps) {
   const theme = useTheme();
+  const keyboardVisible = useKeyboardVisible();
+  // Android resizes the window under the keyboard, which would lift this absolute
+  // bar up over the composer. Fade it out (no spring) until the keyboard closes.
+  const hideForKeyboard = Platform.OS === 'android' && keyboardVisible;
   const [barWidth, setBarWidth] = useState(0);
   const count = state.routes.length;
   const itemWidth = barWidth > 0 ? (barWidth - INNER_PAD * 2) / count : 0;
   const indicatorX = useSharedValue(0);
+  const barOpacity = useSharedValue(1);
 
   useEffect(() => {
     if (itemWidth > 0) indicatorX.set(withTiming(state.index * itemWidth, timings.indicator));
   }, [state.index, itemWidth, indicatorX]);
 
+  useEffect(() => {
+    barOpacity.set(withTiming(hideForKeyboard ? 0 : 1, timings.fade));
+  }, [hideForKeyboard, barOpacity]);
+
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: indicatorX.get() }],
+  }));
+
+  const barStyle = useAnimatedStyle(() => ({
+    opacity: barOpacity.get(),
   }));
 
   const onLayout = (e: LayoutChangeEvent) => {
@@ -78,16 +98,19 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
   };
 
   return (
-    <View
-      pointerEvents="box-none"
-      style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: insets.bottom + theme.layout.tabBarBottomGap,
-        alignItems: 'center',
-        paddingHorizontal: theme.layout.tabBarSideInset,
-      }}>
+    <Animated.View
+      pointerEvents={hideForKeyboard ? 'none' : 'box-none'}
+      style={[
+        {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: insets.bottom + theme.layout.tabBarBottomGap,
+          alignItems: 'center',
+          paddingHorizontal: theme.layout.tabBarSideInset,
+        },
+        barStyle,
+      ]}>
       <View
         accessibilityRole="tablist"
         onLayout={onLayout}
@@ -153,6 +176,6 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
           );
         })}
       </View>
-    </View>
+    </Animated.View>
   );
 }

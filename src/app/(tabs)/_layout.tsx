@@ -51,6 +51,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="assistant"
+        options={{
+          title: 'Assistente',
+          tabBarButtonTestID: 'tab-assistant',
+          tabBarIcon: ({ focused, color, size }) => (
+            <TabIcon name={focused ? 'sparkles' : 'sparkles-outline'} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Impostazioni',
