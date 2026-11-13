@@ -66,6 +66,8 @@ describe('xAI config', () => {
     expect(src).toContain('0o600');
     expect(src).toContain('kvPutArgs');
     expect(src).not.toContain("'--'");
+    // Node accepts redirect:'error'. The worker cannot; this script stays on Node.
+    expect(src).toContain("redirect: 'error'");
   });
 
   test('kv put reads the token from a file via --path', () => {
@@ -138,6 +140,7 @@ describe('getAccessToken', () => {
     const init = fetchMock.mock.calls[0]?.[1];
     expect(fetchMock.mock.calls[0]?.[0]).toBe(XAI_TOKEN_URL);
     expect(init?.method).toBe('POST');
+    expect(init?.redirect).toBe('manual');
     const headers = init?.headers as Record<string, string>;
     expect(headers['Content-Type']).toBe('application/x-www-form-urlencoded');
     const params = new URLSearchParams(String(init?.body ?? ''));
@@ -210,6 +213,29 @@ describe('getAccessToken', () => {
       getAccessToken(envOf(kv), { now: () => NOW, fetch: fetchMock, sleep: async () => {} }),
     ).rejects.toMatchObject({ code: 'login_required' });
     expect(await kv.get('access_token')).toContain('still-valid');
+  });
+
+  test('a 3xx from the token endpoint is an upstream failure and is not followed', async () => {
+    const kv = new MemoryKv();
+    await kv.put('refresh_token', 'rt-1');
+    await kv.put('access_token', JSON.stringify({ token: 'cached', expiresAt: NOW + 30 * 60 * 1000 }));
+    const fetchMock = vi.fn<XaiFetcher>(async () =>
+      new Response('redirect', { status: 302, headers: { Location: 'https://evil.example/oauth2/token' } }),
+    );
+    let thrown: unknown;
+    try {
+      await getAccessToken(envOf(kv), { now: () => NOW, fetch: fetchMock, sleep: async () => {} });
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown).not.toBeInstanceOf(XaiAuthError);
+    expect((thrown as Error).message).toBe('xAI token refresh failed');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(XAI_TOKEN_URL);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ redirect: 'manual' });
+    expect(await kv.get('refresh_token')).toBe('rt-1');
+    expect(await kv.get('access_token')).toContain('cached');
   });
 
   test('a transient refresh failure returns a cached token that is still valid', async () => {

@@ -354,9 +354,10 @@ function buildPayload(env: Env, req: ChatRequest, nowMs: number, tools: { type: 
 
 async function postResponses(fetchImpl: XaiFetcher, accessToken: string, payload: UpstreamPayload): Promise<Response> {
   assertXaiUrl(XAI_RESPONSES_URL);
-  return fetchImpl(XAI_RESPONSES_URL, {
+  const res = await fetchImpl(XAI_RESPONSES_URL, {
     method: 'POST',
-    redirect: 'error',
+    // workerd rejects redirect:'error'. Refuse 3xx below so we never follow off *.x.ai.
+    redirect: 'manual',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
@@ -364,6 +365,11 @@ async function postResponses(fetchImpl: XaiFetcher, accessToken: string, payload
     },
     body: JSON.stringify(payload),
   });
+  if (res.status >= 300 && res.status < 400) {
+    await res.body?.cancel()?.catch(() => undefined);
+    return jsonBody(502, 'upstream', UPSTREAM_MESSAGE);
+  }
+  return res;
 }
 
 async function callUpstream(env: Env, accessToken: string, req: ChatRequest, deps: ChatDeps): Promise<Response> {

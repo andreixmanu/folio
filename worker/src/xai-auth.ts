@@ -121,7 +121,8 @@ async function performRefresh(
   try {
     res = await deps.fetch(XAI_TOKEN_URL, {
       method: 'POST',
-      redirect: 'error',
+      // workerd rejects redirect:'error'. Refuse 3xx below so we never follow off *.x.ai.
+      redirect: 'manual',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Accept: 'application/json',
@@ -135,6 +136,11 @@ async function performRefresh(
   } catch (err) {
     if (stillValid(cached, deps.now())) return cached.token;
     throw err instanceof Error ? err : new Error('xAI token refresh failed');
+  }
+
+  if (res.status >= 300 && res.status < 400) {
+    await res.body?.cancel()?.catch(() => undefined);
+    throw new Error('xAI token refresh failed');
   }
 
   const json = await readJson(res);

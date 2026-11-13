@@ -23,6 +23,10 @@ const RATE_LIMITED = {
   error: 'rate_limited',
   message: 'Troppe richieste, riprova tra poco.',
 };
+const UPSTREAM = {
+  error: 'upstream',
+  message: 'Servizio xAI non disponibile.',
+};
 
 function envOf(kv: MemoryKv, extra: Partial<Env> = {}): Env {
   return { XAI_AUTH: kv as unknown as KVNamespace, APP_CHAT_TOKEN: APP_TOKEN, ...extra };
@@ -234,11 +238,29 @@ describe('POST /chat', () => {
     expect(await limited.json()).toEqual(RATE_LIMITED);
   });
 
+  test('a 3xx from the responses API is a 502 and is not followed', async () => {
+    const kv = new MemoryKv();
+    await seedAccess(kv);
+    const fetchUpstream = vi.fn<XaiFetcher>(async (url, init) => {
+      expect(url).toBe('https://api.x.ai/v1/responses');
+      expect(init?.redirect).toBe('manual');
+      return new Response('redirect', { status: 302, headers: { Location: 'https://evil.example/v1/responses' } });
+    });
+    const app = createApp({ now: () => NOW, fetchUpstream, sleep: async () => {} });
+    const res = await post(app, envOf(kv), { messages }, APP_TOKEN);
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body).toEqual(UPSTREAM);
+    expect(JSON.stringify(body)).not.toContain(ACCESS);
+    expect(fetchUpstream).toHaveBeenCalledTimes(1);
+  });
+
   test('streams deltas, deduped sources, and done', async () => {
     const kv = new MemoryKv();
     await seedAccess(kv);
     const fetchUpstream = vi.fn<XaiFetcher>(async (url, init) => {
       expect(url).toBe('https://api.x.ai/v1/responses');
+      expect(init?.redirect).toBe('manual');
       const headers = init?.headers as Record<string, string>;
       expect(headers.Authorization).toBe(`Bearer ${ACCESS}`);
       const payload = JSON.parse(String(init?.body)) as {
