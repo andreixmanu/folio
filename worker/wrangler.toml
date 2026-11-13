@@ -1,19 +1,19 @@
-# Local development only for now: `npm run dev` (wrangler dev). No deploy, no account needed.
+# Local dev: `npm run dev` (wrangler dev). Deploy to workers.dev with `npx wrangler deploy`.
 name = "folio-api"
 main = "src/index.ts"
 compatibility_date = "2026-11-01"
-workers_dev = false
+workers_dev = true
 send_metrics = false
 
 [dev]
 port = 8787
 ip = "0.0.0.0"
 
-# Placeholder id is enough for `wrangler dev` and local KV (`--local`).
-# A real namespace id is needed only for a future deploy.
+# Remote namespace. Local `wrangler dev` and `wrangler kv --local` persist under this id.
+# Previous local data is under `folio-xai-auth-local`; run `npm run login:xai` again.
 [[kv_namespaces]]
 binding = "XAI_AUTH"
-id = "folio-xai-auth-local"
+id = "671d4e3224e742d3a0d812e76976a6b9"
 
 [vars]
 XAI_MODEL = "grok-4.7"

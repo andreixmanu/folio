@@ -18,7 +18,7 @@ Symbol map and Kraken naming quirks (XBT/XXBT, XETHZEUR, XDG…) live in `src/sy
 npm install
 npm test          # vitest
 npm run typecheck
-npm run dev       # wrangler dev on :8787 (local only, no Cloudflare login, no deploy)
+npm run dev       # wrangler dev on :8787 (local; no Cloudflare login)
 ```
 
 In development the Expo dev server proxies `/api/*` to `http://127.0.0.1:8787` (see `../metro.config.js`),
@@ -35,8 +35,23 @@ npm run login:xai                # device flow
 
 `login:xai` prints one line to stdout, the verification URL. Open it and approve access. Progress stays on stderr; the script never prints tokens. On success stdout ends with `OK` and the refresh token is stored with `wrangler kv key put --local --binding XAI_AUTH`.
 
-Local KV state lives in `.wrangler/` and must not be committed. `npm run login:xai -- --remote` writes remote KV and is for a future deploy only.
+Local KV state lives in `.wrangler/` and must not be committed. Local `wrangler dev` and `wrangler kv --local` persist under the `XAI_AUTH` `id` in `wrangler.toml`. After that id changed, run `npm run login:xai` again so local dev has a refresh token. `npm run login:xai -- --remote` writes remote KV (see Deploy).
 
-Model: `XAI_MODEL` (default `grok-4.7` in `wrangler.toml`). Search tools: `XAI_SEARCH_TOOLS` (default `web_search,x_search`; set it to an empty string to disable them). A real `XAI_AUTH` namespace id is needed only for a future deploy; the placeholder in `wrangler.toml` is enough for local dev.
+Model: `XAI_MODEL` (default `grok-4.7` in `wrangler.toml`). Search tools: `XAI_SEARCH_TOOLS` (default `web_search,x_search`; set it to an empty string to disable them).
 
 `XAI_DEBUG_EVENTS=1` (off unless set to exactly `1`) logs each upstream SSE event type as `console.log('[xai-event]', type)`. For `*_call` and `output_item` events it also logs the item `type` and `status`. It does not log deltas, reasoning text, search queries, URLs, tokens, or headers. Leave it unset for normal use; a local override belongs in `.dev.vars`, which is gitignored.
+
+## Deploy (workers.dev)
+
+`workers_dev` is enabled. From `worker/`:
+
+```bash
+npx wrangler kv namespace create XAI_AUTH   # already done; the id is in wrangler.toml
+npx wrangler secret put APP_CHAT_TOKEN      # pipe the value in; do not paste it into shell history
+npx wrangler deploy
+npm run login:xai -- --remote               # put the refresh token in remote KV
+```
+
+`scripts/xai-login.mjs` already supports `--remote`.
+
+Set `EXPO_PUBLIC_API_URL` (the workers.dev URL from deploy) and `EXPO_PUBLIC_CHAT_TOKEN` (the same value as `APP_CHAT_TOKEN`) in the app `.env`.
