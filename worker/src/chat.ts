@@ -247,10 +247,129 @@ function encodeSse(encoder: TextEncoder, event: string, data: unknown): Uint8Arr
   return encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
-/** Re-emit upstream Responses SSE as delta / sources / error / done.
+export type StatusPhase = 'thinking' | 'searching_web' | 'searching_x';
+
+const SAFE_ID = /^[A-Za-z0-9_.:-]{1,80}$/;
+
+function safeId(value: unknown): string {
+  return typeof value === 'string' && SAFE_ID.test(value) ? value : '';
+}
+
+/** Function names xAI uses for an `x_search` tool call (`custom_tool_call` items). */
+function isXToolName(name: string): boolean {
+  return (
+    name.includes('x_search') ||
+    name === 'x_keyword_search' ||
+    name === 'x_semantic_search' ||
+    name === 'x_user_search' ||
+    name === 'x_thread_fetch'
+  );
+}
+
+function searchKind(type: string, data: unknown): 'web' | 'x' | null {
+  const rec = isRecord(data) ? data : null;
+  const item = rec && isRecord(rec.item) ? rec.item : null;
+  const event = type.toLowerCase();
+  const itemType = safeId(item?.type).toLowerCase();
+  const itemName = safeId(item?.name).toLowerCase();
+  const topName = safeId(rec?.name).toLowerCase();
+  const callId = (safeId(item?.call_id) || safeId(rec?.call_id)).toLowerCase();
+
+  const web =
+    event.includes('web_search') ||
+    itemType === 'web_search_call' ||
+    itemName.includes('web_search') ||
+    topName.includes('web_search');
+  if (web) return 'web';
+
+  // Attachment search also uses custom_tool_call, with an `as_` call id. Not X.
+  if (callId.startsWith('as_')) return null;
+
+  if (event.includes('x_search') || itemType === 'x_search_call') return 'x';
+  if (isXToolName(itemName) || isXToolName(topName) || callId.startsWith('xs_')) return 'x';
+  // Observed stream: X Search is `custom_tool_call`, not `response.x_search_call.*`.
+  if (itemType === 'custom_tool_call' || event.startsWith('response.custom_tool_call')) {
+    if (itemName && !isXToolName(itemName)) return null;
+    if (topName && !isXToolName(topName)) return null;
+    return 'x';
+  }
+  return null;
+}
+
+function searchSettled(type: string, itemStatus: string): boolean {
+  const event = type.toLowerCase();
+  if (event.endsWith('.in_progress') || event.endsWith('.searching') || event.endsWith('.delta')) return false;
+  if (event.endsWith('.completed') || event === 'response.output_item.done') return true;
+  return itemStatus === 'completed';
+}
+
+/** Phase for one upstream event, or `null` when the event should not change status. */
+export function statusPhaseFor(type: string, data: unknown): StatusPhase | null {
+  if (typeof type !== 'string' || type.length === 0 || type.length > 120) return null;
+  const kind = searchKind(type, data);
+  if (kind) {
+    const rec = isRecord(data) ? data : null;
+    const item = rec && isRecord(rec.item) ? rec.item : null;
+    const itemStatus = safeId(item?.status).toLowerCase();
+    if (searchSettled(type, itemStatus)) return 'thinking';
+    return kind === 'web' ? 'searching_web' : 'searching_x';
+  }
+  const item = isRecord(data) && isRecord(data.item) ? data.item : null;
+  const itemType = safeId(item?.type).toLowerCase();
+  const event = type.toLowerCase();
+  if (
+    event === 'response.created' ||
+    event === 'response.in_progress' ||
+    event.includes('reasoning') ||
+    itemType === 'reasoning'
+  ) {
+    return 'thinking';
+  }
+  return null;
+}
+
+const DEBUG_TOKEN = /^[A-Za-z0-9_.:-]{1,120}$/;
+
+/** Event type only. For tool-call / output_item events, also the item type and status. */
+function logDebugEvent(eventType: string, data: unknown): void {
+  const type = DEBUG_TOKEN.test(eventType) ? eventType : 'unknown';
+  const item = isRecord(data) && isRecord(data.item) ? data.item : null;
+  const rawItemType = item && typeof item.type === 'string' ? item.type : '';
+  const rawItemStatus = item && typeof item.status === 'string' ? item.status : '';
+  const callLike = type.includes('_call') || type.includes('output_item') || rawItemType.includes('_call');
+  if (!callLike) {
+    console.log('[xai-event]', type);
+    return;
+  }
+  const itemType = DEBUG_TOKEN.test(rawItemType) ? rawItemType : '';
+  const itemStatus = DEBUG_TOKEN.test(rawItemStatus) ? rawItemStatus : '';
+  console.log('[xai-event]', type, itemType, itemStatus);
+}
+
+export type ClientSseOptions = {
+  /** When true, log upstream SSE event type names. Never logs payloads. */
+  debugEvents?: boolean;
+};
+
+/** One turn so a queued chunk can leave the isolate before the next await. */
+function yieldForFlush(): Promise<void> {
+  const scheduler = (globalThis as { scheduler?: { wait?: (ms: number) => Promise<void> } }).scheduler;
+  if (scheduler && typeof scheduler.wait === 'function') return scheduler.wait(1);
+  return new Promise((resolve) => {
+    setTimeout(resolve, 1);
+  });
+}
+
+/** Re-emit upstream Responses SSE as status / delta / sources / error / done.
  *  Does not buffer the body. Cancelling this stream cancels `upstream`.
+ *  The opening status chunk is enqueued in `start`, before any upstream read.
+ *  The upstream body is read only from `pull`, after that chunk has been taken
+ *  and after a short yield, so the status is not stuck behind the first model event.
  */
-export function toClientSse(upstream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+export function toClientSse(
+  upstream: ReadableStream<Uint8Array>,
+  options: ClientSseOptions = {},
+): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -258,76 +377,117 @@ export function toClientSse(upstream: ReadableStream<Uint8Array>): ReadableStrea
   const seen = new Set<string>();
   let failed: { code: string; message: string } | null = null;
   let clientGone = false;
+  let finished = false;
+  let lastPhase: StatusPhase | null = null;
+  let sentDelta = false;
+  let pumping = false;
   const reader = upstream.getReader();
 
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (clientGone) return;
-      try {
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (clientGone) return;
-          if (done) {
-            finish(controller);
-            return;
-          }
-          pushChunk(value, controller);
-          if ((controller.desiredSize ?? 0) <= 0) return;
-        }
-      } catch {
-        if (clientGone) return;
-        failed = { code: 'upstream', message: UPSTREAM_MESSAGE };
-        try {
-          finish(controller);
-        } catch {
-          /* consumer already gone */
-        }
-      }
-    },
-    cancel(reason) {
+  const enqueue = (controller: ReadableStreamDefaultController<Uint8Array>, bytes: Uint8Array): void => {
+    if (clientGone) return;
+    try {
+      controller.enqueue(bytes);
+    } catch {
       clientGone = true;
-      return reader.cancel(reason);
-    },
-  });
+    }
+  };
 
-  function pushChunk(value: Uint8Array, controller: ReadableStreamDefaultController<Uint8Array>): void {
+  const emitPhase = (controller: ReadableStreamDefaultController<Uint8Array>, phase: StatusPhase | null): void => {
+    if (sentDelta || clientGone || phase === null || phase === lastPhase) return;
+    lastPhase = phase;
+    enqueue(controller, encodeSse(encoder, 'status', { phase }));
+  };
+
+  const consume = (controller: ReadableStreamDefaultController<Uint8Array>, raw: string): void => {
+    const block = parseSseBlock(raw);
+    if (!block || clientGone) return;
+    collectCitations(block.data, sources, seen);
+    const type = isRecord(block.data) && typeof block.data.type === 'string' ? block.data.type : '';
+    const name = block.event || type;
+    if (options.debugEvents) logDebugEvent(name, block.data);
+    emitPhase(controller, statusPhaseFor(name, block.data));
+    if (!failed && (name === 'response.output_text.delta' || type === 'response.output_text.delta')) {
+      const delta = isRecord(block.data) ? block.data.delta : undefined;
+      if (typeof delta === 'string' && delta.length > 0 && !clientGone) {
+        enqueue(controller, encodeSse(encoder, 'delta', { text: delta }));
+        sentDelta = true;
+      }
+    }
+    if (name === 'response.failed' || name === 'error' || type === 'response.failed' || type === 'error') {
+      failed = { code: safeErrorCode(block.data), message: UPSTREAM_MESSAGE };
+    }
+  };
+
+  const pushChunk = (controller: ReadableStreamDefaultController<Uint8Array>, value: Uint8Array): void => {
     buffer += decoder.decode(value, { stream: true });
     buffer = buffer.replace(/\r\n/g, '\n');
     let sep = buffer.indexOf('\n\n');
     while (sep !== -1) {
       const raw = buffer.slice(0, sep);
       buffer = buffer.slice(sep + 2);
-      consume(raw, controller);
+      consume(controller, raw);
+      if (clientGone) return;
       sep = buffer.indexOf('\n\n');
     }
-  }
+  };
 
-  function finish(controller: ReadableStreamDefaultController<Uint8Array>): void {
+  const finish = (controller: ReadableStreamDefaultController<Uint8Array>): void => {
+    if (finished) return;
+    finished = true;
     buffer += decoder.decode();
     buffer = buffer.replace(/\r\n/g, '\n');
-    if (buffer.trim()) consume(buffer, controller);
-    if (sources.length > 0) controller.enqueue(encodeSse(encoder, 'sources', { sources }));
-    if (failed) controller.enqueue(encodeSse(encoder, 'error', failed));
-    controller.enqueue(encodeSse(encoder, 'done', {}));
-    controller.close();
-  }
+    if (buffer.trim()) consume(controller, buffer);
+    if (clientGone) return;
+    if (sources.length > 0) enqueue(controller, encodeSse(encoder, 'sources', { sources }));
+    if (failed) enqueue(controller, encodeSse(encoder, 'error', failed));
+    if (clientGone) return;
+    enqueue(controller, encodeSse(encoder, 'done', {}));
+    if (clientGone) return;
+    try {
+      controller.close();
+    } catch {
+      /* already closed */
+    }
+  };
 
-  function consume(raw: string, controller: ReadableStreamDefaultController<Uint8Array>): void {
-    const block = parseSseBlock(raw);
-    if (!block) return;
-    collectCitations(block.data, sources, seen);
-    const type = isRecord(block.data) && typeof block.data.type === 'string' ? block.data.type : '';
-    const name = block.event || type;
-    if (!failed && (name === 'response.output_text.delta' || type === 'response.output_text.delta')) {
-      const delta = isRecord(block.data) ? block.data.delta : undefined;
-      if (typeof delta === 'string' && delta.length > 0) {
-        controller.enqueue(encodeSse(encoder, 'delta', { text: delta }));
-      }
-    }
-    if (name === 'response.failed' || name === 'error' || type === 'response.failed' || type === 'error') {
-      failed = { code: safeErrorCode(block.data), message: UPSTREAM_MESSAGE };
-    }
-  }
+  return new ReadableStream<Uint8Array>(
+    {
+      start(controller) {
+        lastPhase = 'thinking';
+        controller.enqueue(encodeSse(encoder, 'status', { phase: 'thinking' }));
+      },
+      async pull(controller) {
+        if (clientGone || finished || pumping) return;
+        pumping = true;
+        await yieldForFlush();
+        if (clientGone || finished) return;
+        try {
+          while (!clientGone) {
+            const { done, value } = await reader.read();
+            if (clientGone) return;
+            if (done) {
+              finish(controller);
+              return;
+            }
+            if (value) pushChunk(controller, value);
+          }
+        } catch {
+          if (clientGone) return;
+          failed = { code: 'upstream', message: UPSTREAM_MESSAGE };
+          try {
+            finish(controller);
+          } catch {
+            /* consumer already gone */
+          }
+        }
+      },
+      cancel(reason) {
+        clientGone = true;
+        return reader.cancel(reason);
+      },
+    },
+    new CountQueuingStrategy({ highWaterMark: 1 }),
+  );
 }
 
 type UpstreamPayload = {
@@ -414,7 +574,10 @@ export async function handleChat(env: Env, tokenHeader: string, rawBody: string,
       return mapped;
     }
     if (!upstream.body) return jsonBody(502, 'upstream', UPSTREAM_MESSAGE);
-    return new Response(toClientSse(upstream.body), { status: 200, headers: SSE_HEADERS });
+    return new Response(toClientSse(upstream.body, { debugEvents: env.XAI_DEBUG_EVENTS === '1' }), {
+      status: 200,
+      headers: SSE_HEADERS,
+    });
   } catch {
     return jsonBody(502, 'upstream', UPSTREAM_MESSAGE);
   }

@@ -277,6 +277,41 @@ describe('Assistant screen', () => {
     }
   });
 
+  test('shows a status line until the first delta', async () => {
+    let push: (chunk: string) => void = () => {};
+    let close: () => void = () => {};
+    fetchMock.mockImplementation(() => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const encoder = new TextEncoder();
+          push = (chunk: string) => controller.enqueue(encoder.encode(chunk));
+          close = () => controller.close();
+        },
+      });
+      return Promise.resolve({ ok: true, status: 200, body, text: async () => '' } as never);
+    });
+
+    await renderWithProviders(<AssistantScreen />);
+    await fireEvent.press(screen.getByTestId('suggestion-1'));
+    expect(await screen.findByText('Sto pensando…')).toBeTruthy();
+
+    await act(() => {
+      push('event: status\ndata: {"phase":"searching_web"}\n\n');
+    });
+    expect(await screen.findByText('Sto cercando sul web…')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText('Sto pensando…')).toBeNull());
+
+    await act(() => {
+      push('event: delta\ndata: {"text":"Bitcoin sale"}\n\n');
+      push('event: done\ndata: {}\n\n');
+      close();
+    });
+    expect(await screen.findByText(/Bitcoin sale/)).toBeTruthy();
+    expect(screen.queryByText('Sto pensando…')).toBeNull();
+    expect(screen.queryByText('Sto cercando sul web…')).toBeNull();
+    expect(screen.queryByText('Sto cercando su X…')).toBeNull();
+  });
+
   test('Nuova chat clears the conversation', async () => {
     fetchMock.mockResolvedValue(okStream('Risposta breve') as never);
     await renderWithProviders(<AssistantScreen />);

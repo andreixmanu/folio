@@ -101,6 +101,7 @@ export default function AssistantScreen() {
   const snapshot = usePortfolio().data;
   const messages = useChatStore((s) => s.messages);
   const status = useChatStore((s) => s.status);
+  const pendingPhase = useChatStore((s) => s.pendingPhase);
   const send = useChatStore((s) => s.send);
   const stop = useChatStore((s) => s.stop);
   const newChat = useChatStore((s) => s.newChat);
@@ -188,6 +189,7 @@ export default function AssistantScreen() {
             <MessageList
               messages={messages}
               typingId={typingId}
+              pendingPhase={pendingPhase}
               keyboardVisible={keyboardOpen}
               keyboardHeight={keyboard.height}
               onRetry={() => {

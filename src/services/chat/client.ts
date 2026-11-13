@@ -27,6 +27,8 @@ export type ChatTurn = { role: 'user' | 'assistant'; content: string };
 
 export type ChatSource = { title: string; url: string };
 
+export type ChatPhase = 'thinking' | 'searching_web' | 'searching_x';
+
 const NETWORK_MESSAGE = 'Assistente non raggiungibile. Il worker è avviato?';
 
 const DEFAULT_MESSAGES: Record<string, string> = {
@@ -123,15 +125,26 @@ function parseSources(value: unknown): ChatSource[] {
   return sources;
 }
 
+function parsePhase(value: unknown): ChatPhase | null {
+  if (value === 'thinking' || value === 'searching_web' || value === 'searching_x') return value;
+  return null;
+}
+
 function dispatch(
   event: SseEvent,
   onDelta: (text: string) => void,
   onSources: (sources: ChatSource[]) => void,
+  onStatus?: (phase: ChatPhase) => void,
 ): void {
   let data: unknown;
   try {
     data = JSON.parse(event.data);
   } catch {
+    return;
+  }
+  if (event.event === 'status') {
+    const phase = isRecord(data) ? parsePhase(data.phase) : null;
+    if (phase) onStatus?.(phase);
     return;
   }
   if (event.event === 'delta' && isRecord(data) && typeof data.text === 'string' && data.text.length > 0) {
@@ -206,12 +219,14 @@ export async function streamChat({
   signal,
   onDelta,
   onSources,
+  onStatus,
 }: {
   messages: ChatTurn[];
   portfolio?: ChatPortfolio;
   signal?: AbortSignal;
   onDelta: (text: string) => void;
   onSources: (sources: ChatSource[]) => void;
+  onStatus?: (phase: ChatPhase) => void;
 }): Promise<void> {
   if (signal?.aborted) return;
   const base = resolveApiBaseUrl();
@@ -245,7 +260,7 @@ export async function streamChat({
     throw errorFromBody(res.status, raw);
   }
 
-  const parser = createSseParser((event) => dispatch(event, onDelta, onSources));
+  const parser = createSseParser((event) => dispatch(event, onDelta, onSources, onStatus));
   try {
     await readBody(res, parser, signal);
   } catch (error) {

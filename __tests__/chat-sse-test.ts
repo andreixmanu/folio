@@ -91,6 +91,37 @@ describe('streamChat', () => {
     process.env.EXPO_PUBLIC_API_URL = previousApi;
   });
 
+  test('forwards status phases and ignores an unknown phase', async () => {
+    const raw = [
+      'event: status\ndata: {"phase":"thinking"}\n\n',
+      'event: status\ndata: {"phase":"searching_web"}\n\n',
+      'event: status\ndata: {"phase":"nope"}\n\n',
+      'event: delta\ndata: {"text":"Ciao"}\n\n',
+      'event: status\ndata: {"phase":"searching_x"}\n\n',
+      'event: done\ndata: {}\n\n',
+    ].join('');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: null,
+      text: async () => raw,
+    } as unknown as Awaited<ReturnType<typeof expoFetch>>);
+    const phases: string[] = [];
+    let text = '';
+    await streamChat({
+      messages: [{ role: 'user', content: 'ciao' }],
+      onDelta: (delta) => {
+        text += delta;
+      },
+      onSources: () => {},
+      onStatus: (phase) => {
+        phases.push(phase);
+      },
+    });
+    expect(phases).toEqual(['thinking', 'searching_web', 'searching_x']);
+    expect(text).toBe('Ciao');
+  });
+
   test('reads a text body when the stream is missing', async () => {
     const raw = 'event: delta\ndata: {"text":"Ciao"}\n\nevent: done\ndata: {}\n\n';
     fetchMock.mockResolvedValue({

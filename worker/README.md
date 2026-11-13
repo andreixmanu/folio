@@ -7,7 +7,7 @@ Cloudflare Worker (Hono) that proxies Kraken's free public API (no key) and norm
 | `GET /prices?symbols=BTC,ETH,SOL` | Live EUR quotes (Kraken `Ticker`), `changePct` vs today's 00:00 UTC open | 30 s |
 | `GET /history?symbols=BTC,ETH&range=1M` | Close prices (Kraken `OHLC`), `t` in seconds | 1 min – 6 h by range |
 | `GET /logo/:symbol` | Stock/ETF logo PNG, proxied from Financial Modeling Prep's public no-key image endpoint (ETFs mapped to the issuer listing, e.g. VWCE → VWRL.L); 404 if unknown | 7 days (misses 1 day) |
-| `POST /chat` | Assistente mercati (xAI). Header `X-Folio-Token`. SSE: `delta`, `sources`, `error`, `done` | – |
+| `POST /chat` | Assistente mercati (xAI). Header `X-Folio-Token`. SSE: `status` (`thinking`, `searching_web`, `searching_x`), `delta`, `sources`, `error`, `done` | – |
 | `GET /health` | Liveness | – |
 
 Ranges → OHLC interval (≤ 720 candles): 1D 15m · 1W 1h · 1M 4h · 1Y 1d · ALL 1w.
@@ -38,3 +38,5 @@ npm run login:xai                # device flow
 Local KV state lives in `.wrangler/` and must not be committed. `npm run login:xai -- --remote` writes remote KV and is for a future deploy only.
 
 Model: `XAI_MODEL` (default `grok-4.7` in `wrangler.toml`). Search tools: `XAI_SEARCH_TOOLS` (default `web_search,x_search`; set it to an empty string to disable them). A real `XAI_AUTH` namespace id is needed only for a future deploy; the placeholder in `wrangler.toml` is enough for local dev.
+
+`XAI_DEBUG_EVENTS=1` (off unless set to exactly `1`) logs each upstream SSE event type as `console.log('[xai-event]', type)`. For `*_call` and `output_item` events it also logs the item `type` and `status`. It does not log deltas, reasoning text, search queries, URLs, tokens, or headers. Leave it unset for normal use; a local override belongs in `.dev.vars`, which is gitignored.

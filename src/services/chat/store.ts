@@ -5,7 +5,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import type { PortfolioSnapshot } from '@/services/types';
 import { useUiStore } from '@/store/ui-store';
 
-import { ChatError, streamChat, type ChatSource, type ChatTurn } from './client';
+import { ChatError, streamChat, type ChatPhase, type ChatSource, type ChatTurn } from './client';
 import { buildPortfolioContext } from './context';
 
 export type ChatMessage = {
@@ -22,6 +22,8 @@ type ChatStatus = 'idle' | 'streaming';
 type ChatState = {
   messages: ChatMessage[];
   status: ChatStatus;
+  /** Live phase for the empty assistant bubble. Not persisted. */
+  pendingPhase: ChatPhase | null;
   send: (text: string, portfolio: PortfolioSnapshot | undefined) => Promise<void>;
   stop: () => void;
   newChat: () => void;
@@ -102,6 +104,7 @@ export const useChatStore = create<ChatState>()(
     (set, get) => ({
       messages: [],
       status: 'idle',
+      pendingPhase: null,
       async send(text, portfolio) {
         const trimmed = text.trim();
         if (!trimmed || get().status === 'streaming') return;
@@ -124,7 +127,11 @@ export const useChatStore = create<ChatState>()(
           createdAt: Date.now(),
         };
         const assistantId = assistant.id;
-        set({ messages: cap([...get().messages, user, assistant]), status: 'streaming' });
+        set({
+          messages: cap([...get().messages, user, assistant]),
+          status: 'streaming',
+          pendingPhase: 'thinking',
+        });
 
         const hideBalances = useUiStore.getState().hideBalances;
         const context = portfolio ? buildPortfolioContext(portfolio, hideBalances) : undefined;
@@ -132,6 +139,7 @@ export const useChatStore = create<ChatState>()(
 
         let pending = '';
         let timer: ReturnType<typeof setTimeout> | null = null;
+        let gotDelta = false;
 
         const clearTimer = () => {
           if (timer) {
@@ -143,6 +151,7 @@ export const useChatStore = create<ChatState>()(
         const apply = (chunk: string) => {
           if (!chunk || gen !== generation) return;
           set((state) => ({
+            pendingPhase: null,
             messages: state.messages.map((message) =>
               message.id === assistantId ? { ...message, content: message.content + chunk } : message,
             ),
@@ -172,8 +181,18 @@ export const useChatStore = create<ChatState>()(
             portfolio: context,
             signal: controller.signal,
             onDelta: (delta) => {
+              if (!gotDelta) {
+                gotDelta = true;
+                pending += delta;
+                flush();
+                return;
+              }
               pending += delta;
               schedule();
+            },
+            onStatus: (phase) => {
+              if (gen !== generation || gotDelta) return;
+              set({ pendingPhase: phase });
             },
             onSources: (sources) => {
               if (gen !== generation) return;
@@ -188,6 +207,7 @@ export const useChatStore = create<ChatState>()(
           if (gen !== generation) return;
           set((state) => ({
             status: 'idle',
+            pendingPhase: null,
             messages: cap(
               state.messages.filter((message) => {
                 if (message.id !== assistantId) return true;
@@ -208,6 +228,7 @@ export const useChatStore = create<ChatState>()(
               : new ChatError('network', 'Assistente non raggiungibile. Il worker è avviato?');
           set((state) => ({
             status: 'idle',
+            pendingPhase: null,
             messages: state.messages.map((message) =>
               message.id === assistantId
                 ? { ...message, error: { code: chatError.code, message: chatError.message } }
@@ -217,17 +238,18 @@ export const useChatStore = create<ChatState>()(
         } finally {
           clearTimer();
           if (abortController === controller) abortController = null;
-          if (gen === generation && get().status === 'streaming') set({ status: 'idle' });
+          if (gen === generation && get().status === 'streaming') set({ status: 'idle', pendingPhase: null });
         }
       },
       stop() {
         abortController?.abort();
+        set({ pendingPhase: null });
       },
       newChat() {
         generation += 1;
         abortController?.abort();
         abortController = null;
-        set({ messages: [], status: 'idle' });
+        set({ messages: [], status: 'idle', pendingPhase: null });
       },
       retry() {
         if (get().status === 'streaming') return;
@@ -248,6 +270,7 @@ export const useChatStore = create<ChatState>()(
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => AsyncStorage),
+      // `pendingPhase` stays out of storage: it only exists while a turn is streaming.
       partialize: (state) => ({ messages: cap(state.messages) }),
       merge: (persisted, current) => {
         const stored = (persisted ?? {}) as { messages?: unknown };

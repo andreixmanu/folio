@@ -3,6 +3,7 @@ import { FlatList, Platform, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { AppText, PressableScale } from '@/components/ui';
+import type { ChatPhase } from '@/services/chat/client';
 import type { ChatMessage } from '@/services/chat/store';
 import { enterFade, useTheme } from '@/theme';
 
@@ -41,10 +42,12 @@ function SourceChips({ sources }: { sources: { title: string; url: string }[] })
 function MessageRow({
   message,
   typing,
+  phase,
   onRetry,
 }: {
   message: ChatMessage;
   typing: boolean;
+  phase: ChatPhase | null;
   onRetry: () => void;
 }) {
   const theme = useTheme();
@@ -84,7 +87,7 @@ function MessageRow({
           padding: theme.spacing.md,
         }}>
         {hasBody ? <MarkdownView source={message.content} /> : null}
-        {typing ? <TypingIndicator /> : null}
+        {typing ? <TypingIndicator phase={phase} /> : null}
         {hasSources && message.sources ? <SourceChips sources={message.sources} /> : null}
         {message.error ? (
           <View style={{ marginTop: hasBody || hasSources ? theme.spacing.sm : 0, gap: theme.spacing.xs }}>
@@ -110,12 +113,14 @@ function MessageRow({
 export function MessageList({
   messages,
   typingId,
+  pendingPhase = null,
   onRetry,
   keyboardVisible = false,
   keyboardHeight = 0,
 }: {
   messages: ChatMessage[];
   typingId?: string;
+  pendingPhase?: ChatPhase | null;
   onRetry: () => void;
   /** When the keyboard opens or its overlap changes, keep the latest message in view. */
   keyboardVisible?: boolean;
@@ -126,7 +131,7 @@ export function MessageList({
 
   useEffect(() => {
     listRef.current?.scrollToEnd({ animated: true });
-  }, [messages, typingId]);
+  }, [messages, typingId, pendingPhase]);
 
   useEffect(() => {
     if (!keyboardVisible) return;
@@ -151,7 +156,12 @@ export function MessageList({
         if (keyboardVisible) listRef.current?.scrollToEnd({ animated: true });
       }}
       renderItem={({ item }) => (
-        <MessageRow message={item} typing={item.id === typingId} onRetry={onRetry} />
+        <MessageRow
+          message={item}
+          typing={item.id === typingId}
+          phase={item.id === typingId ? pendingPhase : null}
+          onRetry={onRetry}
+        />
       )}
     />
   );

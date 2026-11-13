@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { createApp } from '../src/app';
-import { toClientSse } from '../src/chat';
+import { statusPhaseFor, toClientSse } from '../src/chat';
 import type { Env } from '../src/env';
 import { resetXaiAuthForTests, type XaiFetcher } from '../src/xai-auth';
 
@@ -291,13 +291,14 @@ describe('POST /chat', () => {
     expect(res.headers.get('access-control-allow-origin')).toBe('*');
 
     const events = parseEvents(await res.text());
-    expect(events.map((event) => event.event)).toEqual(['delta', 'delta', 'sources', 'done']);
-    expect(events[0]?.data).toEqual({ text: 'Ciao' });
-    expect(events[1]?.data).toEqual({ text: ' mondo' });
-    expect(events[2]?.data).toEqual({
+    expect(events.map((event) => event.event)).toEqual(['status', 'delta', 'delta', 'sources', 'done']);
+    expect(events[0]?.data).toEqual({ phase: 'thinking' });
+    expect(events[1]?.data).toEqual({ text: 'Ciao' });
+    expect(events[2]?.data).toEqual({ text: ' mondo' });
+    expect(events[3]?.data).toEqual({
       sources: [{ title: 'Esempio', url: 'https://example.com/a' }],
     });
-    expect(events[3]?.data).toEqual({});
+    expect(events[4]?.data).toEqual({});
     expect(fetchUpstream).toHaveBeenCalledTimes(1);
   });
 
@@ -341,7 +342,8 @@ describe('POST /chat', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('text/event-stream; charset=utf-8');
     const events = parseEvents(await res.text());
-    expect(events.map((event) => event.event)).toEqual(['delta', 'delta', 'sources', 'done']);
+    expect(events.map((event) => event.event)).toEqual(['status', 'delta', 'delta', 'sources', 'done']);
+    expect(events[0]?.data).toEqual({ phase: 'thinking' });
     expect(fetchUpstream).toHaveBeenCalledTimes(1);
   });
 
@@ -365,7 +367,8 @@ describe('POST /chat', () => {
     const res = await post(app, envOf(kv), { messages }, APP_TOKEN);
     expect(res.status).toBe(200);
     const events = parseEvents(await res.text());
-    expect(events.map((event) => event.event)).toEqual(['delta', 'done']);
+    expect(events.map((event) => event.event)).toEqual(['status', 'delta', 'done']);
+    expect(events[0]?.data).toEqual({ phase: 'thinking' });
     expect(fetchUpstream).toHaveBeenCalledTimes(2);
   });
 });
@@ -407,14 +410,39 @@ describe('toClientSse', () => {
     const body = chunkedSse(sse).body;
     expect(body).not.toBeNull();
     const events = parseEvents(await new Response(toClientSse(body as ReadableStream<Uint8Array>)).text());
-    expect(events.map((event) => event.event)).toEqual(['delta', 'sources', 'done']);
-    expect(events[1]?.data).toEqual({
+    expect(events.map((event) => event.event)).toEqual(['status', 'delta', 'sources', 'done']);
+    expect(events[0]?.data).toEqual({ phase: 'thinking' });
+    expect(events[1]?.data).toEqual({ text: 'Ciao' });
+    expect(events[2]?.data).toEqual({
       sources: [
         { title: 'Esempio', url: 'https://example.com/a' },
         { title: 'reuters.com', url: 'https://www.reuters.com/markets/a' },
         { title: 'blog.example.com', url: 'https://blog.example.com/x' },
       ],
     });
+  });
+
+  test('emits thinking before upstream produces any bytes', async () => {
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const upstream = new ReadableStream<Uint8Array>({
+      async pull() {
+        await gate;
+      },
+    });
+    const reader = toClientSse(upstream).getReader();
+    const first = await Promise.race([
+      reader.read(),
+      new Promise<never>((_resolve, reject) => {
+        setTimeout(() => reject(new Error('status blocked on upstream')), 300);
+      }),
+    ]);
+    expect(first.done).toBe(false);
+    expect(new TextDecoder().decode(first.value)).toContain('"phase":"thinking"');
+    release?.();
+    await reader.cancel('stop');
   });
 
   test('cancelling the client stream cancels the upstream', async () => {
@@ -449,10 +477,250 @@ describe('toClientSse', () => {
     const reader = client.getReader();
     const first = await reader.read();
     expect(first.done).toBe(false);
+    // The opening status event is queued before upstream is read. The delta
+    // pulls the stream into the second upstream read, which waits on `gate`.
+    const second = await reader.read();
+    expect(second.done).toBe(false);
     await reader.cancel('client closed');
     expect(cancelReason).toBe('client closed');
     releaseSecond?.();
     const next = await reader.read();
     expect(next.done).toBe(true);
+  });
+});
+
+describe('statusPhaseFor', () => {
+  test('maps the observed xAI event names and ignores unknown ones', () => {
+    const secret = 'QUERY_SENTINEL_7f3a';
+    expect(statusPhaseFor('response.created', { type: 'response.created' })).toBe('thinking');
+    expect(statusPhaseFor('response.in_progress', { type: 'response.in_progress' })).toBe('thinking');
+    expect(
+      statusPhaseFor('response.output_item.added', {
+        type: 'response.output_item.added',
+        item: { type: 'reasoning', status: 'in_progress' },
+      }),
+    ).toBe('thinking');
+    expect(
+      statusPhaseFor('response.output_item.added', {
+        type: 'response.output_item.added',
+        item: { type: 'reasoning', status: 'completed' },
+      }),
+    ).toBe('thinking');
+    expect(
+      statusPhaseFor('response.reasoning_summary_part.added', { type: 'response.reasoning_summary_part.added' }),
+    ).toBe('thinking');
+    expect(
+      statusPhaseFor('response.reasoning_summary_text.delta', {
+        type: 'response.reasoning_summary_text.delta',
+        delta: secret,
+      }),
+    ).toBe('thinking');
+    expect(
+      statusPhaseFor('response.reasoning_summary_text.done', { type: 'response.reasoning_summary_text.done' }),
+    ).toBe('thinking');
+    expect(
+      statusPhaseFor('response.reasoning_summary_part.done', { type: 'response.reasoning_summary_part.done' }),
+    ).toBe('thinking');
+    expect(
+      statusPhaseFor('response.output_item.done', {
+        type: 'response.output_item.done',
+        item: { type: 'reasoning', status: 'completed' },
+      }),
+    ).toBe('thinking');
+
+    expect(
+      statusPhaseFor('response.output_item.added', {
+        type: 'response.output_item.added',
+        item: { type: 'web_search_call', status: 'in_progress' },
+      }),
+    ).toBe('searching_web');
+    expect(statusPhaseFor('response.web_search_call.in_progress', { type: 'response.web_search_call.in_progress' })).toBe(
+      'searching_web',
+    );
+    expect(
+      statusPhaseFor('response.web_search_call.searching', {
+        type: 'response.web_search_call.searching',
+        item: { type: 'web_search_call', status: 'searching', action: { query: secret } },
+      }),
+    ).toBe('searching_web');
+    expect(
+      statusPhaseFor('response.web_search_call.completed', {
+        type: 'response.web_search_call.completed',
+        item: { type: 'web_search_call', status: 'completed', action: { query: secret } },
+      }),
+    ).toBe('thinking');
+    expect(
+      statusPhaseFor('response.output_item.done', {
+        type: 'response.output_item.done',
+        item: { type: 'web_search_call', status: 'completed' },
+      }),
+    ).toBe('thinking');
+
+    expect(
+      statusPhaseFor('response.output_item.added', {
+        type: 'response.output_item.added',
+        item: { type: 'custom_tool_call', status: 'in_progress', name: 'x_keyword_search', call_id: 'xs_1' },
+      }),
+    ).toBe('searching_x');
+    expect(
+      statusPhaseFor('response.custom_tool_call_input.delta', {
+        type: 'response.custom_tool_call_input.delta',
+        delta: secret,
+      }),
+    ).toBe('searching_x');
+    expect(
+      statusPhaseFor('response.custom_tool_call_input.done', { type: 'response.custom_tool_call_input.done' }),
+    ).toBe('searching_x');
+    expect(
+      statusPhaseFor('response.output_item.done', {
+        type: 'response.output_item.done',
+        item: { type: 'custom_tool_call', status: 'completed', name: 'x_semantic_search' },
+      }),
+    ).toBe('thinking');
+    expect(statusPhaseFor('response.x_search_call.searching', { type: 'response.x_search_call.searching' })).toBe(
+      'searching_x',
+    );
+    expect(statusPhaseFor('response.x_search_call.completed', { type: 'response.x_search_call.completed' })).toBe(
+      'thinking',
+    );
+    expect(
+      statusPhaseFor('response.output_item.added', {
+        type: 'response.output_item.added',
+        item: { type: 'custom_tool_call', name: 'x_user_search', status: 'in_progress' },
+      }),
+    ).toBe('searching_x');
+    expect(
+      statusPhaseFor('response.output_item.added', {
+        type: 'response.output_item.added',
+        item: { type: 'custom_tool_call', name: 'x_thread_fetch', status: 'in_progress' },
+      }),
+    ).toBe('searching_x');
+
+    expect(statusPhaseFor('response.output_text.delta', { type: 'response.output_text.delta', delta: secret })).toBe(
+      null,
+    );
+    expect(statusPhaseFor('response.content_part.added', { type: 'response.content_part.added' })).toBeNull();
+    expect(statusPhaseFor('response.output_text.annotation.added', {})).toBeNull();
+    expect(statusPhaseFor('response.output_text.done', {})).toBeNull();
+    expect(statusPhaseFor('response.content_part.done', {})).toBeNull();
+    expect(statusPhaseFor('response.completed', {
+      type: 'response.completed',
+      response: { output: [{ type: 'web_search_call', status: 'completed', action: { query: secret } }] },
+    })).toBeNull();
+    expect(
+      statusPhaseFor('response.output_item.added', {
+        type: 'response.output_item.added',
+        item: { type: 'message', status: 'in_progress' },
+      }),
+    ).toBeNull();
+    expect(
+      statusPhaseFor('response.output_item.done', {
+        type: 'response.output_item.done',
+        item: { type: 'message', status: 'completed' },
+      }),
+    ).toBeNull();
+    expect(
+      statusPhaseFor('response.output_item.added', {
+        type: 'response.output_item.added',
+        item: { type: 'custom_tool_call', call_id: 'as_attachment', status: 'in_progress' },
+      }),
+    ).toBeNull();
+    expect(statusPhaseFor('response.foo', { delta: secret })).toBeNull();
+    expect(statusPhaseFor('', {})).toBeNull();
+  });
+});
+
+describe('toClientSse status', () => {
+  const reason = 'REASONING_SENTINEL_7f3a';
+  const query = 'QUERY_SENTINEL_7f3a';
+
+  function block(event: string, data: unknown): string {
+    return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  }
+
+  test('emits phase changes, dedupes, and stops after the first delta without leaking text', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const sse = [
+      block('response.created', { type: 'response.created' }),
+      block('response.in_progress', { type: 'response.in_progress' }),
+      block('response.output_item.added', {
+        type: 'response.output_item.added',
+        item: { type: 'reasoning', status: 'in_progress' },
+      }),
+      block('response.reasoning_summary_text.delta', {
+        type: 'response.reasoning_summary_text.delta',
+        delta: reason,
+      }),
+      block('response.output_item.added', {
+        type: 'response.output_item.added',
+        item: { type: 'web_search_call', status: 'in_progress' },
+      }),
+      block('response.web_search_call.in_progress', { type: 'response.web_search_call.in_progress' }),
+      block('response.web_search_call.searching', {
+        type: 'response.web_search_call.searching',
+        item: { type: 'web_search_call', status: 'searching', action: { type: 'search', query } },
+      }),
+      block('response.web_search_call.searching', { type: 'response.web_search_call.searching' }),
+      block('response.web_search_call.completed', {
+        type: 'response.web_search_call.completed',
+        item: { type: 'web_search_call', status: 'completed', action: { query } },
+      }),
+      block('response.output_item.added', {
+        type: 'response.output_item.added',
+        item: { type: 'custom_tool_call', status: 'in_progress', name: 'x_keyword_search', call_id: 'xs_abc' },
+      }),
+      block('response.custom_tool_call_input.delta', {
+        type: 'response.custom_tool_call_input.delta',
+        delta: query,
+      }),
+      block('response.custom_tool_call_input.done', { type: 'response.custom_tool_call_input.done' }),
+      block('response.output_item.done', {
+        type: 'response.output_item.done',
+        item: { type: 'custom_tool_call', status: 'completed', name: 'x_keyword_search' },
+      }),
+      block('response.output_text.delta', { type: 'response.output_text.delta', delta: 'Ciao' }),
+      block('response.web_search_call.searching', {
+        type: 'response.web_search_call.searching',
+        item: { action: { query } },
+      }),
+      block('response.reasoning_summary_text.delta', {
+        type: 'response.reasoning_summary_text.delta',
+        delta: reason,
+      }),
+      block('response.output_text.delta', { type: 'response.output_text.delta', delta: ' mondo' }),
+    ].join('');
+
+    const body = chunkedSse(sse).body;
+    expect(body).not.toBeNull();
+    const raw = await new Response(toClientSse(body as ReadableStream<Uint8Array>, { debugEvents: true })).text();
+    const events = parseEvents(raw);
+    expect(events.map((event) => event.event)).toEqual([
+      'status',
+      'status',
+      'status',
+      'status',
+      'status',
+      'delta',
+      'delta',
+      'done',
+    ]);
+    expect(events.map((event) => event.data)).toEqual([
+      { phase: 'thinking' },
+      { phase: 'searching_web' },
+      { phase: 'thinking' },
+      { phase: 'searching_x' },
+      { phase: 'thinking' },
+      { text: 'Ciao' },
+      { text: ' mondo' },
+      {},
+    ]);
+    expect(raw).not.toContain(reason);
+    expect(raw).not.toContain(query);
+    const logged = log.mock.calls.flat().map((part) => String(part)).join('\n');
+    expect(logged).toContain('response.web_search_call.searching');
+    expect(logged).toContain('response.custom_tool_call_input.delta');
+    expect(logged).not.toContain(reason);
+    expect(logged).not.toContain(query);
+    log.mockRestore();
   });
 });
