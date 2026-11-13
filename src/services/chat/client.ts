@@ -114,17 +114,6 @@ export function createSseParser(onEvent: (event: SseEvent) => void): SseParser {
   };
 }
 
-function parseSources(value: unknown): ChatSource[] {
-  if (!Array.isArray(value)) return [];
-  const sources: ChatSource[] = [];
-  for (const item of value) {
-    if (!isRecord(item) || typeof item.url !== 'string' || item.url.length === 0) continue;
-    const title = typeof item.title === 'string' && item.title.trim() ? item.title : item.url;
-    sources.push({ title, url: item.url });
-  }
-  return sources;
-}
-
 function parsePhase(value: unknown): ChatPhase | null {
   if (value === 'thinking' || value === 'searching_web' || value === 'searching_x') return value;
   return null;
@@ -133,7 +122,6 @@ function parsePhase(value: unknown): ChatPhase | null {
 function dispatch(
   event: SseEvent,
   onDelta: (text: string) => void,
-  onSources: (sources: ChatSource[]) => void,
   onStatus?: (phase: ChatPhase) => void,
 ): void {
   let data: unknown;
@@ -151,11 +139,8 @@ function dispatch(
     onDelta(data.text);
     return;
   }
-  if (event.event === 'sources') {
-    const sources = parseSources(isRecord(data) ? data.sources : undefined);
-    if (sources.length > 0) onSources(sources);
-    return;
-  }
+  // Legacy event. Citations are not shown.
+  if (event.event === 'sources') return;
   if (event.event === 'error') {
     const code = isRecord(data) && typeof data.code === 'string' ? data.code : 'upstream';
     const serverMessage = isRecord(data) && typeof data.message === 'string' ? data.message : undefined;
@@ -218,14 +203,12 @@ export async function streamChat({
   portfolio,
   signal,
   onDelta,
-  onSources,
   onStatus,
 }: {
   messages: ChatTurn[];
   portfolio?: ChatPortfolio;
   signal?: AbortSignal;
   onDelta: (text: string) => void;
-  onSources: (sources: ChatSource[]) => void;
   onStatus?: (phase: ChatPhase) => void;
 }): Promise<void> {
   if (signal?.aborted) return;
@@ -260,7 +243,7 @@ export async function streamChat({
     throw errorFromBody(res.status, raw);
   }
 
-  const parser = createSseParser((event) => dispatch(event, onDelta, onSources, onStatus));
+  const parser = createSseParser((event) => dispatch(event, onDelta, onStatus));
   try {
     await readBody(res, parser, signal);
   } catch (error) {

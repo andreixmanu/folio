@@ -145,7 +145,8 @@ describe('Assistant screen', () => {
     await fireEvent.press(screen.getByTestId('suggestion-0'));
 
     expect(await screen.findByText(/Ciao mondo/)).toBeTruthy();
-    expect(screen.getByText('kraken.com')).toBeTruthy();
+    expect(screen.queryByText('kraken.com')).toBeNull();
+    expect(useChatStore.getState().messages.some((message) => message.sources?.length)).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(String(url)).toBe('https://folio.test/api/chat');
@@ -310,6 +311,25 @@ describe('Assistant screen', () => {
     expect(screen.queryByText('Sto pensando…')).toBeNull();
     expect(screen.queryByText('Sto cercando sul web…')).toBeNull();
     expect(screen.queryByText('Sto cercando su X…')).toBeNull();
+  });
+
+  test('does not render sources saved on an old message', async () => {
+    useChatStore.setState({
+      messages: [
+        {
+          id: 'old-1',
+          role: 'assistant',
+          content: 'Vecchia risposta',
+          createdAt: 1,
+          sources: [{ title: 'Kraken', url: 'https://www.kraken.com/prices' }],
+        },
+      ],
+      status: 'idle',
+    });
+    await renderWithProviders(<AssistantScreen />);
+    expect(screen.getByText(/Vecchia risposta/)).toBeTruthy();
+    expect(screen.queryByText('kraken.com')).toBeNull();
+    expect(screen.queryByText('Kraken')).toBeNull();
   });
 
   test('Nuova chat clears the conversation', async () => {

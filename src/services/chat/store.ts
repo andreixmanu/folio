@@ -13,6 +13,7 @@ export type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
   createdAt: number;
+  /** Legacy field. Old transcripts may still contain it; it is not written or shown. */
   sources?: ChatSource[];
   error?: { code: string; message: string };
 };
@@ -50,12 +51,6 @@ function cap(messages: ChatMessage[]): ChatMessage[] {
   return messages.length > MAX_STORED ? messages.slice(messages.length - MAX_STORED) : messages;
 }
 
-function isSource(value: unknown): value is ChatSource {
-  if (!value || typeof value !== 'object') return false;
-  const source = value as ChatSource;
-  return typeof source.title === 'string' && typeof source.url === 'string';
-}
-
 function sanitize(value: unknown): ChatMessage[] {
   if (!Array.isArray(value)) return [];
   const messages: ChatMessage[] = [];
@@ -72,15 +67,14 @@ function sanitize(value: unknown): ChatMessage[] {
       typeof message.error.message === 'string'
         ? { code: message.error.code, message: message.error.message }
         : undefined;
-    const sources = Array.isArray(message.sources) ? message.sources.filter(isSource) : undefined;
     // Drop a placeholder left behind by a stream that never produced text.
-    if (!message.content.trim() && !error && !sources?.length) continue;
+    // Legacy `sources` are ignored so old transcripts do not keep them.
+    if (!message.content.trim() && !error) continue;
     messages.push({
       id: message.id,
       role: message.role,
       content: message.content,
       createdAt: message.createdAt,
-      ...(sources && sources.length > 0 ? { sources } : {}),
       ...(error ? { error } : {}),
     });
   }
@@ -194,14 +188,6 @@ export const useChatStore = create<ChatState>()(
               if (gen !== generation || gotDelta) return;
               set({ pendingPhase: phase });
             },
-            onSources: (sources) => {
-              if (gen !== generation) return;
-              set((state) => ({
-                messages: state.messages.map((message) =>
-                  message.id === assistantId ? { ...message, sources } : message,
-                ),
-              }));
-            },
           });
           flush();
           if (gen !== generation) return;
@@ -211,11 +197,7 @@ export const useChatStore = create<ChatState>()(
             messages: cap(
               state.messages.filter((message) => {
                 if (message.id !== assistantId) return true;
-                return (
-                  message.content.trim().length > 0 ||
-                  Boolean(message.error) ||
-                  (message.sources?.length ?? 0) > 0
-                );
+                return message.content.trim().length > 0 || Boolean(message.error);
               }),
             ),
           }));

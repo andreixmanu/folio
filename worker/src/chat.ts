@@ -15,11 +15,14 @@ const UPSTREAM_MESSAGE = 'Servizio xAI non disponibile.';
 const SYSTEM_PROMPT = [
   'Sei "Folio Assistente", analista dei mercati finanziari (azioni, ETF, crypto, macroeconomia,',
   'tassi, valute, materie prime) e del portafoglio dell\'utente. Rispondi in italiano (o nella',
-  'lingua dell\'utente), conciso, con elenchi puntati quando utile, cifre e date precise; cita le',
-  'fonti quando usi notizie recenti. Se la domanda è fuori da mercati/finanza/economia/portafoglio,',
-  'rifiuta gentilmente in una frase e proponi un tema di mercato. Non è consulenza finanziaria:',
-  'niente raccomandazioni personalizzate di acquisto/vendita come ordini; puoi discutere scenari,',
-  'rischi, esposizioni. Usa il contesto del portafoglio (fornito come JSON) quando pertinente.',
+  'lingua dell\'utente), conciso, con elenchi puntati quando utile, cifre e date precise.',
+  'Non aggiungere fonti, link, URL, riferimenti o citazioni: niente sezione "Fonti:", niente',
+  'note a piè di pagina, niente marcatori [1]. Esponi i fatti con date e cifre nel testo.',
+  'Cercare notizie recenti è consentito e incoraggiato. Se la domanda è fuori da',
+  'mercati/finanza/economia/portafoglio, rifiuta gentilmente in una frase e proponi un tema di',
+  'mercato. Non è consulenza finanziaria: niente raccomandazioni personalizzate di',
+  'acquisto/vendita come ordini; puoi discutere scenari, rischi, esposizioni. Usa il contesto',
+  'del portafoglio (fornito come JSON) quando pertinente.',
 ].join(' ');
 
 const SSE_HEADERS = {
@@ -158,51 +161,6 @@ function mapUpstreamStatus(status: number): Response | null {
   if (status === 402 || status === 403) return jsonBody(402, 'subscription', SUBSCRIPTION_MESSAGE);
   if (status === 429) return jsonBody(429, 'rate_limited', RATE_LIMIT_MESSAGE);
   return jsonBody(502, 'upstream', UPSTREAM_MESSAGE);
-}
-
-type Source = { title: string; url: string };
-
-function hostnameTitle(url: string): string | null {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, '');
-    return host.length > 0 ? host : null;
-  } catch {
-    return null;
-  }
-}
-
-function addSource(out: Source[], seen: Set<string>, url: string, title: string): void {
-  if (seen.has(url)) return;
-  seen.add(url);
-  out.push({ title, url });
-}
-
-function collectCitations(node: unknown, out: Source[], seen: Set<string>): void {
-  if (!node || typeof node !== 'object') return;
-  if (Array.isArray(node)) {
-    for (const item of node) collectCitations(item, out, seen);
-    return;
-  }
-  const rec = node as Record<string, unknown>;
-  if (rec.type === 'url_citation' && typeof rec.url === 'string' && rec.url.length > 0) {
-    const title = typeof rec.title === 'string' && rec.title.trim() ? rec.title : rec.url;
-    addSource(out, seen, rec.url, title);
-  }
-  for (const [key, value] of Object.entries(rec)) {
-    // Responses API also sends `citations: string[]` (plain URLs), e.g. response.citations.
-    if (key === 'citations' && Array.isArray(value)) {
-      for (const item of value) {
-        if (typeof item === 'string') {
-          const title = hostnameTitle(item);
-          if (title) addSource(out, seen, item, title);
-        } else {
-          collectCitations(item, out, seen);
-        }
-      }
-      continue;
-    }
-    collectCitations(value, out, seen);
-  }
 }
 
 function safeErrorCode(data: unknown): string {
@@ -360,7 +318,342 @@ function yieldForFlush(): Promise<void> {
   });
 }
 
-/** Re-emit upstream Responses SSE as status / delta / sources / error / done.
+const CITE_HOLD_LIMIT = 200;
+const CITE_NUM = String.raw`\d{1,3}(?!\d)`;
+const RE_CITE_SINGLE = new RegExp(String.raw`^\[\s*${CITE_NUM}\s*\]`);
+const RE_CITE_GROUP = new RegExp(String.raw`^\[\s*${CITE_NUM}(?:\s*,\s*${CITE_NUM})+\s*\]`);
+const RE_CITE_DOUBLE = new RegExp(String.raw`^\[\[\s*${CITE_NUM}\s*\]\]`);
+const RE_CITE_URL = /^\((https?:\/\/[^)\s]+)\)/i;
+
+/** A line that is only a sources heading, optionally a markdown heading or wrapped in emphasis. */
+const SOURCES_HEADING =
+  /^\s{0,3}(?:#{1,6}[ \t]+)?(?:(?:\*\*|__)\s*(?:fonti|sources)\s*:?\s*(?:\*\*|__)|(?:\*|_)\s*(?:fonti|sources)\s*:?\s*(?:\*|_)|(?:fonti|sources))\s*:?\s*$/i;
+
+export type CitationStripper = {
+  /** Returns text that is safe to show. May hold back a short tail. */
+  push: (text: string) => string;
+  /** Flush the tail. Drops a trailing sources block that never resumed into prose. */
+  flush: () => string;
+};
+
+function bracketLen(re: RegExp, text: string): number {
+  const match = re.exec(text);
+  return match ? match[0].length : 0;
+}
+
+function withUrl(text: string, base: number): number {
+  if (base <= 0) return 0;
+  const match = RE_CITE_URL.exec(text.slice(base));
+  return match ? base + match[0].length : 0;
+}
+
+/** `(https://...` with no closing `)` yet, sitting right after a citation bracket. */
+function danglingUrlLength(text: string): number {
+  const base = Math.max(bracketLen(RE_CITE_DOUBLE, text), bracketLen(RE_CITE_GROUP, text), bracketLen(RE_CITE_SINGLE, text));
+  if (base <= 0) return 0;
+  const after = text.slice(base);
+  if (!after.startsWith('(') || after.includes(')') || /\s/.test(after)) return 0;
+  const inner = after.slice(1);
+  if (inner.length === 0) return text.length;
+  const lower = inner.toLowerCase();
+  if ('https://'.startsWith(lower) || /^https?:\/\/\S*$/i.test(inner)) return text.length;
+  return 0;
+}
+
+function partialUrlAt(text: string, index: number): boolean {
+  if (text[index] !== '(') return false;
+  const inner = text.slice(index + 1);
+  if (inner.includes(')') || /\s/.test(inner)) return false;
+  if (inner.length === 0) return true;
+  const lower = inner.toLowerCase();
+  if ('https://'.startsWith(lower)) return true;
+  return /^https?:\/\/\S*$/i.test(inner);
+}
+
+/** True when `text` is a prefix of a 1–3 digit citation and nothing else. Years (4 digits) are not. */
+function incompleteCitation(text: string): boolean {
+  if (!text.startsWith('[') || text.length >= CITE_HOLD_LIMIT) return false;
+  if (text.length === 1) return true;
+
+  let i = text.startsWith('[[') ? 2 : 1;
+  const double = text.startsWith('[[');
+
+  const skipWs = (): void => {
+    while (i < text.length && (text[i] === ' ' || text[i] === '\t')) i += 1;
+  };
+  const readNum = (): 'ok' | 'need' | 'bad' => {
+    skipWs();
+    if (i >= text.length) return 'need';
+    if (!/\d/.test(text[i] ?? '')) return 'bad';
+    let digits = 0;
+    while (i < text.length && /\d/.test(text[i] ?? '')) {
+      digits += 1;
+      i += 1;
+      if (digits > 3) return 'bad';
+    }
+    return 'ok';
+  };
+
+  if (double) {
+    const num = readNum();
+    if (num === 'bad') return false;
+    if (num === 'need') return true;
+    skipWs();
+    if (i >= text.length) return true;
+    if (text[i] !== ']') return false;
+    i += 1;
+    if (i >= text.length) return true;
+    if (text[i] !== ']') return false;
+    i += 1;
+    if (i >= text.length) return true;
+    return partialUrlAt(text, i);
+  }
+
+  const first = readNum();
+  if (first === 'bad') return false;
+  if (first === 'need') return true;
+  while (true) {
+    const mark = i;
+    skipWs();
+    if (i >= text.length) return true;
+    if (text[i] === ',') {
+      i += 1;
+      const num = readNum();
+      if (num === 'bad') return false;
+      if (num === 'need') return true;
+      continue;
+    }
+    i = mark;
+    break;
+  }
+  skipWs();
+  if (i >= text.length) return true;
+  if (text[i] !== ']') return false;
+  i += 1;
+  if (i >= text.length) return true;
+  return partialUrlAt(text, i);
+}
+
+/** Length to delete, `0` when it is not a citation, `-1` when the tail must be held. */
+function citationLength(text: string, endStable: boolean): number {
+  if (!text.startsWith('[')) return 0;
+  const doubleBase = bracketLen(RE_CITE_DOUBLE, text);
+  const groupBase = bracketLen(RE_CITE_GROUP, text);
+  const singleBase = bracketLen(RE_CITE_SINGLE, text);
+  const urlLen = Math.max(withUrl(text, doubleBase), withUrl(text, groupBase), withUrl(text, singleBase));
+  if (urlLen > 0) return urlLen;
+  if (!endStable && incompleteCitation(text)) return -1;
+  if (endStable) {
+    const dangling = danglingUrlLength(text);
+    if (dangling > 0) return dangling;
+  }
+  return Math.max(doubleBase, groupBase, singleBase);
+}
+
+function stripCitations(input: string, endStable: boolean): { emit: string; hold: string } {
+  let emit = '';
+  let i = 0;
+  while (i < input.length) {
+    const next = input.indexOf('[', i);
+    if (next === -1) {
+      emit += input.slice(i);
+      break;
+    }
+    emit += input.slice(i, next);
+    const rest = input.slice(next);
+    const n = citationLength(rest, endStable);
+    if (n < 0) return { emit, hold: rest };
+    if (n === 0) {
+      emit += '[';
+      i = next + 1;
+      continue;
+    }
+    i = next + n;
+  }
+  return { emit, hold: '' };
+}
+
+type LineSlice = { text: string; start: number; complete: boolean };
+
+function lineSlices(buf: string): LineSlice[] {
+  const lines: LineSlice[] = [];
+  let start = 0;
+  for (let i = 0; i < buf.length; i++) {
+    if (buf[i] === '\n') {
+      lines.push({ text: buf.slice(start, i), start, complete: true });
+      start = i + 1;
+    }
+  }
+  lines.push({ text: buf.slice(start), start, complete: false });
+  return lines;
+}
+
+function tailAfterWord(after: string, opener: string): boolean {
+  let i = 0;
+  let sawColon = false;
+  const eatWs = (): void => {
+    while (i < after.length && (after[i] === ' ' || after[i] === '\t')) i += 1;
+  };
+  if (after[i] === ':') {
+    sawColon = true;
+    i += 1;
+  }
+  eatWs();
+  if (opener) {
+    if (i >= after.length) return true;
+    if (after.startsWith(opener, i)) i += opener.length;
+    else if (opener.startsWith(after.slice(i))) return true;
+    else return false;
+  }
+  if (i >= after.length) return true;
+  if (!sawColon && after[i] === ':') {
+    i += 1;
+    eatWs();
+  }
+  return i >= after.length;
+}
+
+/** True when `line` can still grow into a Fonti/Sources heading. */
+function couldBecomeSourcesHeading(line: string): boolean {
+  if (line.length > 60) return false;
+  let i = 0;
+  let spaces = 0;
+  while (i < line.length && (line[i] === ' ' || line[i] === '\t')) {
+    if (spaces >= 3) return false;
+    spaces += 1;
+    i += 1;
+  }
+  if (i >= line.length) return true;
+  if (line[i] === '#') {
+    let hashes = 0;
+    while (i < line.length && line[i] === '#') {
+      hashes += 1;
+      i += 1;
+      if (hashes > 6) return false;
+    }
+    if (i >= line.length) return true;
+    if (line[i] !== ' ' && line[i] !== '\t') return false;
+    while (i < line.length && (line[i] === ' ' || line[i] === '\t')) i += 1;
+    if (i >= line.length) return true;
+  }
+
+  let opener = '';
+  if (line.startsWith('**', i) || line.startsWith('__', i)) {
+    opener = line.slice(i, i + 2);
+    i += 2;
+  } else if (line[i] === '*' || line[i] === '_') {
+    if (i === line.length - 1) return true;
+    opener = line[i] ?? '';
+    i += 1;
+  }
+  const rest = line.slice(i);
+  if (rest.length === 0) return true;
+  const lower = rest.toLowerCase();
+  for (const word of ['fonti', 'sources']) {
+    if (word.startsWith(lower)) return true;
+    if (lower.startsWith(word) && tailAfterWord(rest.slice(word.length), opener)) return true;
+  }
+  return false;
+}
+
+function sourcesHeadingStatus(line: string, complete: boolean): 'yes' | 'maybe' | 'no' {
+  if (SOURCES_HEADING.test(line)) return complete ? 'yes' : 'maybe';
+  if (complete || line.length > 60) return 'no';
+  return couldBecomeSourcesHeading(line) ? 'maybe' : 'no';
+}
+
+function containsLink(text: string): boolean {
+  return /https?:\/\/\S+/i.test(text) || /\[[^\]]+\]\([^)\s]+\)/.test(text);
+}
+
+function isSchemePrefix(text: string): boolean {
+  return 'https://'.startsWith(text.toLowerCase());
+}
+
+function onlyLinkStatus(text: string, complete: boolean): 'yes' | 'maybe' | 'no' {
+  if (/^https?:\/\/\S+$/i.test(text)) return 'yes';
+  if (/^\[[^\]]+\]\([^)\s]+\)$/.test(text)) return 'yes';
+  if (/^<https?:\/\/[^>\s]+>$/i.test(text)) return 'yes';
+  if (complete || text.length >= CITE_HOLD_LIMIT) return 'no';
+  if (isSchemePrefix(text) || /^https?:\/\/\S*$/i.test(text)) return 'maybe';
+  if (/^\[[^\]]*$/.test(text) || /^\[[^\]]+\]\(?[^)\s]*$/.test(text)) return 'maybe';
+  if (/^<https?:?\/?\/?[^>\s]*$/i.test(text)) return 'maybe';
+  return 'no';
+}
+
+function linkBodyStatus(body: string, complete: boolean): 'yes' | 'maybe' | 'no' {
+  if (body.length === 0) return complete ? 'no' : 'maybe';
+  if (containsLink(body)) return 'yes';
+  if (complete) return 'no';
+  return onlyLinkStatus(body, false) === 'maybe' ? 'maybe' : 'no';
+}
+
+/** A fonti block may continue with blank lines or list items that are only links. */
+function linkLineStatus(line: string, complete: boolean): 'yes' | 'maybe' | 'no' {
+  if (line.trim().length === 0) return complete ? 'yes' : 'maybe';
+  const trimmed = line.trim();
+  const bullet = /^(?:[-*•–]|\d{1,3}[.)])\s+(.*)$/.exec(trimmed);
+  if (bullet) return linkBodyStatus(bullet[1] ?? '', complete);
+  if (!complete && /^(?:[-*•–]|\d{1,3}[.)]?)$/.test(trimmed)) return 'maybe';
+  if (!complete && /^\d{1,3}[.)]\s*$/.test(trimmed)) return 'maybe';
+  return onlyLinkStatus(trimmed, complete);
+}
+
+type FontiDecision = { kind: 'none' } | { kind: 'hold'; index: number } | { kind: 'drop'; index: number };
+
+function analyzeFonti(buf: string, final: boolean): FontiDecision {
+  let holdAt: number | null = null;
+  for (const line of lineSlices(buf)) {
+    const lineComplete = line.complete || final;
+    if (holdAt === null) {
+      const status = sourcesHeadingStatus(line.text, lineComplete);
+      if (status === 'yes') holdAt = line.start;
+      else if (status === 'maybe') return { kind: 'hold', index: line.start };
+      continue;
+    }
+    let status = linkLineStatus(line.text, lineComplete);
+    if (final && status === 'maybe') status = 'yes';
+    if (status === 'maybe') return { kind: 'hold', index: holdAt };
+    if (status === 'yes') continue;
+    holdAt = null;
+    const heading = sourcesHeadingStatus(line.text, lineComplete);
+    if (heading === 'yes') holdAt = line.start;
+    else if (heading === 'maybe') return { kind: 'hold', index: line.start };
+  }
+  if (holdAt === null) return { kind: 'none' };
+  return final ? { kind: 'drop', index: holdAt } : { kind: 'hold', index: holdAt };
+}
+
+/**
+ * Drops inline numeric citation markers and a trailing Fonti/Sources link list.
+ * Holds at most ~200 characters when the tail could still be a marker, so the
+ * rest of the text is not delayed. `[2024]` and `[Reuters](url)` stay.
+ */
+export function createCitationStripper(): CitationStripper {
+  let pending = '';
+
+  const drain = (final: boolean): string => {
+    const decision = analyzeFonti(pending, final);
+    const main = decision.kind === 'none' ? pending : pending.slice(0, decision.index);
+    const suffix = decision.kind === 'hold' ? pending.slice(decision.index) : '';
+    const stripped = stripCitations(main, final || decision.kind !== 'none');
+    pending = stripped.hold + suffix;
+    return stripped.emit;
+  };
+
+  return {
+    push(text: string) {
+      if (text.length === 0) return '';
+      pending += text;
+      return drain(false);
+    },
+    flush() {
+      return drain(true);
+    },
+  };
+}
+
+/** Re-emit upstream Responses SSE as status / delta / error / done.
  *  Does not buffer the body. Cancelling this stream cancels `upstream`.
  *  The opening status chunk is enqueued in `start`, before any upstream read.
  *  The upstream body is read only from `pull`, after that chunk has been taken
@@ -373,8 +666,7 @@ export function toClientSse(
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   let buffer = '';
-  const sources: Source[] = [];
-  const seen = new Set<string>();
+  const stripper = createCitationStripper();
   let failed: { code: string; message: string } | null = null;
   let clientGone = false;
   let finished = false;
@@ -398,20 +690,22 @@ export function toClientSse(
     enqueue(controller, encodeSse(encoder, 'status', { phase }));
   };
 
+  const emitDelta = (controller: ReadableStreamDefaultController<Uint8Array>, text: string): void => {
+    if (text.length === 0 || clientGone) return;
+    enqueue(controller, encodeSse(encoder, 'delta', { text }));
+    sentDelta = true;
+  };
+
   const consume = (controller: ReadableStreamDefaultController<Uint8Array>, raw: string): void => {
     const block = parseSseBlock(raw);
     if (!block || clientGone) return;
-    collectCitations(block.data, sources, seen);
     const type = isRecord(block.data) && typeof block.data.type === 'string' ? block.data.type : '';
     const name = block.event || type;
     if (options.debugEvents) logDebugEvent(name, block.data);
     emitPhase(controller, statusPhaseFor(name, block.data));
     if (!failed && (name === 'response.output_text.delta' || type === 'response.output_text.delta')) {
       const delta = isRecord(block.data) ? block.data.delta : undefined;
-      if (typeof delta === 'string' && delta.length > 0 && !clientGone) {
-        enqueue(controller, encodeSse(encoder, 'delta', { text: delta }));
-        sentDelta = true;
-      }
+      if (typeof delta === 'string' && delta.length > 0) emitDelta(controller, stripper.push(delta));
     }
     if (name === 'response.failed' || name === 'error' || type === 'response.failed' || type === 'error') {
       failed = { code: safeErrorCode(block.data), message: UPSTREAM_MESSAGE };
@@ -438,7 +732,7 @@ export function toClientSse(
     buffer = buffer.replace(/\r\n/g, '\n');
     if (buffer.trim()) consume(controller, buffer);
     if (clientGone) return;
-    if (sources.length > 0) enqueue(controller, encodeSse(encoder, 'sources', { sources }));
+    emitDelta(controller, stripper.flush());
     if (failed) enqueue(controller, encodeSse(encoder, 'error', failed));
     if (clientGone) return;
     enqueue(controller, encodeSse(encoder, 'done', {}));

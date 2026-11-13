@@ -7,37 +7,8 @@ import type { ChatPhase } from '@/services/chat/client';
 import type { ChatMessage } from '@/services/chat/store';
 import { enterFade, useTheme } from '@/theme';
 
-import { domainOf, openExternalUrl } from './links';
 import { MarkdownView } from './markdown';
 import { TypingIndicator } from './typing-indicator';
-
-function SourceChips({ sources }: { sources: { title: string; url: string }[] }) {
-  const theme = useTheme();
-  return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.xs, marginTop: theme.spacing.sm }}>
-      {sources.map((source) => {
-        const domain = domainOf(source.url);
-        return (
-          <PressableScale
-            key={source.url}
-            accessibilityLabel={source.title || domain}
-            haptic="selection"
-            onPress={() => openExternalUrl(source.url)}
-            style={{
-              paddingHorizontal: theme.spacing.sm,
-              paddingVertical: theme.spacing.xs,
-              borderRadius: theme.radii.pill,
-              backgroundColor: theme.colors.surfaceMuted,
-            }}>
-            <AppText variant="micro" color="textSecondary">
-              {domain}
-            </AppText>
-          </PressableScale>
-        );
-      })}
-    </View>
-  );
-}
 
 function MessageRow({
   message,
@@ -53,8 +24,7 @@ function MessageRow({
   const theme = useTheme();
   const isUser = message.role === 'user';
   const hasBody = message.content.trim().length > 0;
-  const hasSources = (message.sources?.length ?? 0) > 0;
-  if (!isUser && !hasBody && !typing && !message.error && !hasSources) return null;
+  if (!isUser && !hasBody && !typing && !message.error) return null;
 
   if (isUser) {
     return (
@@ -88,9 +58,8 @@ function MessageRow({
         }}>
         {hasBody ? <MarkdownView source={message.content} /> : null}
         {typing ? <TypingIndicator phase={phase} /> : null}
-        {hasSources && message.sources ? <SourceChips sources={message.sources} /> : null}
         {message.error ? (
-          <View style={{ marginTop: hasBody || hasSources ? theme.spacing.sm : 0, gap: theme.spacing.xs }}>
+          <View style={{ marginTop: hasBody ? theme.spacing.sm : 0, gap: theme.spacing.xs }}>
             <AppText variant="caption" color="negative" accessibilityLiveRegion="polite">
               {message.error.message}
             </AppText>

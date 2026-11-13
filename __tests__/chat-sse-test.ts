@@ -113,7 +113,6 @@ describe('streamChat', () => {
       onDelta: (delta) => {
         text += delta;
       },
-      onSources: () => {},
       onStatus: (phase) => {
         phases.push(phase);
       },
@@ -136,10 +135,31 @@ describe('streamChat', () => {
       onDelta: (delta) => {
         text += delta;
       },
-      onSources: () => {},
     });
     expect(text).toBe('Ciao');
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe('https://folio.test/api/chat');
+  });
+
+  test('ignores a legacy sources event', async () => {
+    const raw = [
+      'event: delta\ndata: {"text":"Ciao"}\n\n',
+      'event: sources\ndata: {"sources":[{"title":"Kraken","url":"https://www.kraken.com/prices"}]}\n\n',
+      'event: done\ndata: {}\n\n',
+    ].join('');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: null,
+      text: async () => raw,
+    } as unknown as Awaited<ReturnType<typeof expoFetch>>);
+    let text = '';
+    await streamChat({
+      messages: [{ role: 'user', content: 'ciao' }],
+      onDelta: (delta) => {
+        text += delta;
+      },
+    });
+    expect(text).toBe('Ciao');
   });
 
   test('throws ChatError with the server message on JSON 401', async () => {
@@ -156,7 +176,6 @@ describe('streamChat', () => {
     const error = await streamChat({
       messages: [{ role: 'user', content: 'ciao' }],
       onDelta: () => {},
-      onSources: () => {},
     }).then(
       () => null,
       (err: unknown) => err,
@@ -184,7 +203,6 @@ describe('streamChat', () => {
       messages: [{ role: 'user', content: 'ciao' }],
       signal: controller.signal,
       onDelta: () => {},
-      onSources: () => {},
     });
     controller.abort();
     await expect(pending).resolves.toBeUndefined();

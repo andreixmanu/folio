@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { createApp } from '../src/app';
-import { statusPhaseFor, toClientSse } from '../src/chat';
+import { createCitationStripper, statusPhaseFor, toClientSse } from '../src/chat';
 import type { Env } from '../src/env';
 import { resetXaiAuthForTests, type XaiFetcher } from '../src/xai-auth';
 
@@ -255,7 +255,7 @@ describe('POST /chat', () => {
     expect(fetchUpstream).toHaveBeenCalledTimes(1);
   });
 
-  test('streams deltas, deduped sources, and done', async () => {
+  test('streams deltas and done, and does not emit sources', async () => {
     const kv = new MemoryKv();
     await seedAccess(kv);
     const fetchUpstream = vi.fn<XaiFetcher>(async (url, init) => {
@@ -275,9 +275,15 @@ describe('POST /chat', () => {
       expect(payload.model).toBe('grok-4.7');
       expect(payload.tools).toEqual([{ type: 'web_search' }, { type: 'x_search' }]);
       expect(payload.input[0]?.role).toBe('system');
-      expect(payload.input[0]?.content).toContain('Folio Assistente');
-      expect(payload.input[0]?.content).toContain('Data di oggi: 2026-11-13.');
-      expect(payload.input[0]?.content).not.toContain('valori assoluti nascosti');
+      const system = payload.input[0]?.content ?? '';
+      expect(system).toContain('Folio Assistente');
+      expect(system).toContain('Data di oggi: 2026-11-13.');
+      expect(system).not.toContain('valori assoluti nascosti');
+      expect(system).toMatch(/Non aggiungere fonti, link, URL, riferimenti o citazioni/);
+      expect(system).toMatch(/niente sezione "Fonti:"/);
+      expect(system).toMatch(/niente marcatori \[1\]/);
+      expect(system).toMatch(/Cercare notizie recenti è consentito e incoraggiato/);
+      expect(system).not.toMatch(/cita le fonti/i);
       expect(payload.input[0]?.content).toContain(JSON.stringify(portfolio));
       expect(payload.input[1]).toEqual(messages[0]);
       return chunkedSse(UPSTREAM_SSE);
@@ -290,15 +296,14 @@ describe('POST /chat', () => {
     expect(res.headers.get('x-accel-buffering')).toBe('no');
     expect(res.headers.get('access-control-allow-origin')).toBe('*');
 
-    const events = parseEvents(await res.text());
-    expect(events.map((event) => event.event)).toEqual(['status', 'delta', 'delta', 'sources', 'done']);
+    const raw = await res.text();
+    const events = parseEvents(raw);
+    expect(events.map((event) => event.event)).toEqual(['status', 'delta', 'delta', 'done']);
+    expect(raw).not.toContain('event: sources');
     expect(events[0]?.data).toEqual({ phase: 'thinking' });
     expect(events[1]?.data).toEqual({ text: 'Ciao' });
     expect(events[2]?.data).toEqual({ text: ' mondo' });
-    expect(events[3]?.data).toEqual({
-      sources: [{ title: 'Esempio', url: 'https://example.com/a' }],
-    });
-    expect(events[4]?.data).toEqual({});
+    expect(events[3]?.data).toEqual({});
     expect(fetchUpstream).toHaveBeenCalledTimes(1);
   });
 
@@ -342,7 +347,8 @@ describe('POST /chat', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('text/event-stream; charset=utf-8');
     const events = parseEvents(await res.text());
-    expect(events.map((event) => event.event)).toEqual(['status', 'delta', 'delta', 'sources', 'done']);
+    expect(events.map((event) => event.event)).toEqual(['status', 'delta', 'delta', 'done']);
+    expect(events.some((event) => event.event === 'sources')).toBe(false);
     expect(events[0]?.data).toEqual({ phase: 'thinking' });
     expect(fetchUpstream).toHaveBeenCalledTimes(1);
   });
@@ -374,7 +380,7 @@ describe('POST /chat', () => {
 });
 
 describe('toClientSse', () => {
-  test('accepts citations URL arrays and dedupes them with url_citation annotations', async () => {
+  test('does not emit sources when upstream sends url_citation annotations and citations', async () => {
     const completed = {
       type: 'response.completed',
       response: {
@@ -409,17 +415,39 @@ describe('toClientSse', () => {
     ].join('\n');
     const body = chunkedSse(sse).body;
     expect(body).not.toBeNull();
-    const events = parseEvents(await new Response(toClientSse(body as ReadableStream<Uint8Array>)).text());
-    expect(events.map((event) => event.event)).toEqual(['status', 'delta', 'sources', 'done']);
+    const raw = await new Response(toClientSse(body as ReadableStream<Uint8Array>)).text();
+    const events = parseEvents(raw);
+    expect(events.map((event) => event.event)).toEqual(['status', 'delta', 'done']);
+    expect(raw).not.toContain('event: sources');
     expect(events[0]?.data).toEqual({ phase: 'thinking' });
     expect(events[1]?.data).toEqual({ text: 'Ciao' });
-    expect(events[2]?.data).toEqual({
-      sources: [
-        { title: 'Esempio', url: 'https://example.com/a' },
-        { title: 'reuters.com', url: 'https://www.reuters.com/markets/a' },
-        { title: 'blog.example.com', url: 'https://blog.example.com/x' },
-      ],
-    });
+    expect(events[2]?.data).toEqual({});
+  });
+
+  test('strips citation markers from deltas and drops a trailing fonti block', async () => {
+    const text =
+      'Il BTC è a 100k[1][2]. Vedi [[1]](https://x.com/a) e [3](https://a.b).\nFonti:\n- [a](u)\n- https://b';
+    const sse = [
+      'event: response.output_text.delta',
+      `data: ${JSON.stringify({ delta: text.slice(0, 17) })}`,
+      '',
+      'event: response.output_text.delta',
+      `data: ${JSON.stringify({ delta: text.slice(17) })}`,
+      '',
+      'event: response.completed',
+      'data: {"response":{"citations":["https://example.com/a"],"output":[{"content":[{"annotations":[{"type":"url_citation","url":"https://example.com/a","title":"Esempio"}]}]}]}}',
+      '',
+    ].join('\n');
+    const body = chunkedSse(sse).body;
+    expect(body).not.toBeNull();
+    const raw = await new Response(toClientSse(body as ReadableStream<Uint8Array>)).text();
+    const events = parseEvents(raw);
+    expect(events.map((event) => event.event)).not.toContain('sources');
+    const joined = events
+      .filter((event) => event.event === 'delta')
+      .map((event) => (event.data as { text: string }).text)
+      .join('');
+    expect(joined).toBe('Il BTC è a 100k. Vedi  e .\n');
   });
 
   test('emits thinking before upstream produces any bytes', async () => {
@@ -486,6 +514,54 @@ describe('toClientSse', () => {
     releaseSecond?.();
     const next = await reader.read();
     expect(next.done).toBe(true);
+  });
+});
+
+describe('createCitationStripper', () => {
+  function through(input: string, parts: string[]): string {
+    const stripper = createCitationStripper();
+    let out = '';
+    for (const part of parts) out += stripper.push(part);
+    return out + stripper.flush();
+  }
+
+  function expectStable(input: string, expected: string): void {
+    expect(through(input, [input])).toBe(expected);
+    for (let i = 0; i <= input.length; i++) {
+      expect(through(input, [input.slice(0, i), input.slice(i)])).toBe(expected);
+    }
+    expect(through(input, [...input])).toBe(expected);
+  }
+
+  test('strips numeric markers across every chunk boundary and keeps years and named links', () => {
+    expectStable('Prima [1] dopo', 'Prima  dopo');
+    expectStable('A[1][2]B', 'AB');
+    expectStable('x [[1]](https://x.com/a) y', 'x  y');
+    expectStable('z [3](https://a.b) w', 'z  w');
+    expectStable('anche [1, 2] e [12].', 'anche  e .');
+    expectStable('anno [2024] ok', 'anno [2024] ok');
+    expectStable('vedi [Reuters](https://r.com) qui', 'vedi [Reuters](https://r.com) qui');
+    expectStable('parentesi [nota] fine', 'parentesi [nota] fine');
+  });
+
+  test('drops a trailing fonti block and keeps Fonti used in prose', () => {
+    expectStable('Fine.\nFonti:\n- [a](u)\n- https://b', 'Fine.\n');
+    expectStable('**Fonti**\n- [a](https://a.example)', '');
+    expectStable('## Sources:\n1. https://b.example/x', '');
+    expectStable('Le fonti contano.', 'Le fonti contano.');
+    expectStable('Dice Fonti a metà frase.', 'Dice Fonti a metà frase.');
+    expectStable('Fonti:\nIl punto è un altro.', 'Fonti:\nIl punto è un altro.');
+  });
+
+  test('holds a split marker only until it can be decided', () => {
+    const stripper = createCitationStripper();
+    expect(stripper.push('Anno [20')).toBe('Anno ');
+    expect(stripper.push('24] ok')).toBe('[2024] ok');
+    expect(stripper.flush()).toBe('');
+
+    const held = createCitationStripper();
+    expect(held.push('Prezzo [1]')).toBe('Prezzo ');
+    expect(held.flush()).toBe('');
   });
 });
 
