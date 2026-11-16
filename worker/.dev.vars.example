@@ -1,4 +1,8 @@
 # Copy to `.dev.vars` (gitignored). Wrangler loads it for local `wrangler dev`.
-# The app sends this value as the `X-Folio-Token` header on POST /chat.
+# The app sends this value as the `X-Folio-Token` header on POST /chat and GET /wallets.
 # This is not an xAI key. Do not commit `.dev.vars`.
 APP_CHAT_TOKEN=change-me-local-dev-token
+
+# Public Tangem receive addresses (read-only). Never logged or returned by the Worker.
+BTC_ADDRESS=
+ETH_ADDRESS=

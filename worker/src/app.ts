@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
+import { requireAppToken } from './auth';
 import { TtlCache } from './cache';
 import { handleChat } from './chat';
 import type { Env } from './env';
@@ -8,6 +9,8 @@ import { fetchQuotes, fetchSeries, KrakenError, type Fetcher } from './kraken';
 import { defaultFetchLogo, logoUrl, normalizeLogoSymbol, type BinaryFetcher } from './logos';
 import { parseRange, RANGE_SPECS } from './ranges';
 import { parseSymbols } from './symbols';
+import { getWalletsResponse } from './wallets';
+import type { FetchImpl } from './wallets/types';
 import type { XaiFetcher } from './xai-auth';
 
 const TICKER_TTL_SEC = 30;
@@ -22,10 +25,14 @@ export type AppDeps = {
   /** xAI token refresh and `POST /v1/responses`. Tests inject this so nothing hits the network. */
   fetchUpstream?: XaiFetcher;
   sleep?: (ms: number) => Promise<void>;
+  /** Injected in tests so wallet/Kraken calls never hit the network. */
+  fetch?: FetchImpl;
+  chainTimeoutMs?: number;
+  requestTimeoutMs?: number;
 };
 
-async function defaultFetchJson(url: string): Promise<unknown> {
-  const res = await fetch(url, { headers: { 'User-Agent': 'folio-worker/0.1' } });
+async function defaultFetchJson(url: string, fetchImpl: FetchImpl): Promise<unknown> {
+  const res = await fetchImpl(url, { headers: { 'User-Agent': 'folio-worker/0.1' } });
   if (!res.ok) throw new KrakenError(`Kraken HTTP ${res.status}`, res.status >= 500 ? 502 : 500);
   return res.json();
 }
@@ -33,7 +40,8 @@ async function defaultFetchJson(url: string): Promise<unknown> {
 export function createApp(deps: AppDeps = {}) {
   const now = deps.now ?? (() => Date.now());
   const cache = deps.cache ?? new TtlCache(now);
-  const rawFetch = deps.fetchJson ?? defaultFetchJson;
+  const fetchImpl: FetchImpl = deps.fetch ?? fetch;
+  const rawFetch = deps.fetchJson ?? ((url: string) => defaultFetchJson(url, fetchImpl));
   const fetchLogo = deps.fetchLogo ?? defaultFetchLogo;
   const fetchUpstream = deps.fetchUpstream;
   const sleep = deps.sleep;
@@ -56,7 +64,10 @@ export function createApp(deps: AppDeps = {}) {
   });
 
   app.get('/', (c) =>
-    c.json({ name: 'folio-api', endpoints: ['/health', '/prices', '/history', '/logo/:symbol', '/chat'] }),
+    c.json({
+      name: 'folio-api',
+      endpoints: ['/health', '/prices', '/history', '/logo/:symbol', '/chat', '/wallets'],
+    }),
   );
   app.get('/health', (c) => c.json({ ok: true, time: new Date(now()).toISOString() }));
 
@@ -132,6 +143,24 @@ export function createApp(deps: AppDeps = {}) {
       fetch: fetchUpstream,
       sleep,
     });
+  });
+
+  /** GET /wallets — read-only Tangem balances. Auth matches `/chat`; never returns addresses. */
+  app.get('/wallets', async (c) => {
+    const denied = requireAppToken(c.env, c.req.header('X-Folio-Token') ?? '');
+    if (denied) return denied;
+    const body = await getWalletsResponse({
+      env: c.env,
+      cache,
+      fetchJson: rawFetch,
+      fetch: fetchImpl,
+      now,
+      chainTimeoutMs: deps.chainTimeoutMs,
+      requestTimeoutMs: deps.requestTimeoutMs,
+      debug: c.req.query('debug') === '1',
+    });
+    c.header('Cache-Control', 'private, max-age=60');
+    return c.json(body);
   });
 
   return app;

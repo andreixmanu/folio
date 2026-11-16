@@ -8,6 +8,7 @@ import {
   IconBadge,
   IslandCard,
   ListRow,
+  PressableScale,
   RowSeparator,
 } from '@/components/ui';
 import { formatMoney, formatPercent, formatQuantity, MASK } from '@/lib/format';
@@ -21,7 +22,15 @@ import { SOURCE_COLORS, SOURCE_ICONS } from './source-meta';
  * All holdings in a single island, grouped by source. Each group header doubles as the
  * per-source summary (name, account detail, subtotal and weight).
  */
-export function HoldingsBySource({ snapshot }: { snapshot: PortfolioSnapshot }) {
+export function HoldingsBySource({
+  snapshot,
+  walletNote,
+  onRetryWallets,
+}: {
+  snapshot: PortfolioSnapshot;
+  walletNote?: string | null;
+  onRetryWallets?: () => void;
+}) {
   const theme = useTheme();
   const masked = useUiStore((s) => s.hideBalances);
   const groups = snapshot.sources
@@ -85,6 +94,19 @@ export function HoldingsBySource({ snapshot }: { snapshot: PortfolioSnapshot }) 
           ))}
         </View>
       ))}
+      {walletNote ? (
+        <PressableScale
+          onPress={onRetryWallets}
+          haptic="selection"
+          accessibilityRole="button"
+          accessibilityLabel={walletNote}
+          testID="wallet-note"
+          style={{ marginTop: theme.spacing.sm, alignSelf: 'flex-start' }}>
+          <AppText variant="caption" color="warning">
+            {walletNote}
+          </AppText>
+        </PressableScale>
+      ) : null}
     </IslandCard>
   );
 }

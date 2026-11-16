@@ -6,7 +6,7 @@ import { ThemeProvider } from '@/theme';
 
 export function renderWithProviders(ui: ReactElement) {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+    defaultOptions: { queries: { retry: false, retryDelay: 0, gcTime: Infinity } },
   });
   return render(
     <QueryClientProvider client={client}>

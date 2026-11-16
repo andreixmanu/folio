@@ -42,6 +42,7 @@ export function Screen({ children, refreshing = false, onRefresh, testID }: Scre
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }} testID={testID}>
       <Animated.ScrollView
+        testID="screen-scroll"
         onScroll={onScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}

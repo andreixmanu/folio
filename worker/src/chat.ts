@@ -1,3 +1,4 @@
+import { requireAppToken } from './auth';
 import type { Env } from './env';
 import { getAccessToken, XaiAuthError, assertXaiUrl, type XaiAuthDeps, type XaiFetcher } from './xai-auth';
 import { XAI_DEFAULT_MODEL, XAI_DEFAULT_SEARCH_TOOLS, XAI_RESPONSES_URL } from './xai-config';
@@ -56,17 +57,6 @@ export type Portfolio = {
 export type ChatRequest = { messages: ChatMessage[]; portfolio?: Portfolio };
 
 type ChatDeps = XaiAuthDeps;
-
-/** XOR over the longer input so a mismatch does not return early. */
-function timingSafeEqual(a: string, b: string): boolean {
-  const enc = new TextEncoder();
-  const left = enc.encode(a);
-  const right = enc.encode(b);
-  let diff = left.length ^ right.length;
-  const len = Math.max(left.length, right.length);
-  for (let i = 0; i < len; i++) diff |= (left[i] ?? 0) ^ (right[i] ?? 0);
-  return diff === 0;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -843,9 +833,8 @@ async function callUpstream(env: Env, accessToken: string, req: ChatRequest, dep
 }
 
 export async function handleChat(env: Env, tokenHeader: string, rawBody: string, deps: ChatDeps = {}): Promise<Response> {
-  const secret = env?.APP_CHAT_TOKEN;
-  if (!secret) return jsonBody(503, 'chat_disabled');
-  if (!timingSafeEqual(tokenHeader, secret)) return jsonBody(401, 'unauthorized');
+  const denied = requireAppToken(env, tokenHeader);
+  if (denied) return denied;
 
   const parsed = parseChatBody(rawBody);
   if (!parsed.ok) return jsonBody(400, 'invalid_body');

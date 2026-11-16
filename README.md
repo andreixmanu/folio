@@ -2,7 +2,7 @@
 
 Personal investment portfolio app (Android + web), built with Expo SDK 58, Expo Router and TypeScript (strict).
 
-**Phase 1:** UI foundations with typed mock data. Later phases connect IBKR (Flex Query), crypto wallets/exchanges and RSS feeds through a Cloudflare Workers backend.
+**Phase 1:** UI foundations with typed mock IBKR stocks and live read-only Tangem crypto balances via the Cloudflare Worker. Later phases connect IBKR Flex Query and RSS feeds.
 
 ## Scripts
 
@@ -40,6 +40,10 @@ src/
 
 Swap data sources in `src/services/sources.ts`; hooks and screens stay unchanged.
 
+## Wallets (Tangem)
+
+Crypto holdings come from `GET /wallets` on the Worker (Bitcoin + Ethereum + USDC/USDT). The app sends `X-Folio-Token` and never displays receive addresses. Stocks stay on the IBKR mock. Pull-to-refresh on Portafoglio reloads wallets and quotes.
+
 ## Assistente
 
 The Assistente tab is a markets-only chat. The app streams `POST /chat` on the Folio Worker
@@ -50,7 +54,7 @@ are left out of that payload. The Worker currently requires those numbers, so a 
 turn is rejected as `invalid_body` until the check allows a weights-only portfolio.
 
 - `EXPO_PUBLIC_API_URL` — Worker base URL, or the Expo `/api` proxy in dev (see `.env.example`).
-- `EXPO_PUBLIC_CHAT_TOKEN` — must match `APP_CHAT_TOKEN` in `worker/.dev.vars`.
+- `EXPO_PUBLIC_CHAT_TOKEN` — must match `APP_CHAT_TOKEN` in `worker/.dev.vars` (`/chat` and `/wallets`).
 
 ```bash
 cd worker

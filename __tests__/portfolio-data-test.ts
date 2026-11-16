@@ -3,34 +3,42 @@ import { MOCK_POSITIONS, MOCK_SOURCES } from '@/services/mock/positions';
 import { mockStockPriceSource } from '@/services/mock/stock-prices';
 import { buildSnapshot, buildValueHistory } from '@/services/portfolio';
 import { withFallback } from '@/services/prices/fallback';
-import type { PriceQuote, PriceSeries, PriceSource } from '@/services/types';
+import { TANGEM_SOURCE } from '@/services/sources';
+import type { Position, PriceQuote, PriceSeries, PriceSource } from '@/services/types';
 import { darkColors } from '@/theme/colors';
+
+const CRYPTO_POSITIONS: Position[] = [
+  { id: 'tangem-btc', sourceId: 'tangem', symbol: 'BTC', name: 'Bitcoin', assetClass: 'crypto', instrument: 'coin', quantity: 0.4215 },
+  { id: 'tangem-eth', sourceId: 'tangem', symbol: 'ETH', name: 'Ethereum', assetClass: 'crypto', instrument: 'coin', quantity: 3.82 },
+];
+
+const SOURCES = [...MOCK_SOURCES, TANGEM_SOURCE];
+const POSITIONS = [...MOCK_POSITIONS, ...CRYPTO_POSITIONS];
 
 const CRYPTO: PriceQuote[] = [
   { symbol: 'BTC', price: 64_815.1, changePct: -2.6 },
   { symbol: 'ETH', price: 1_812.26, changePct: -2.1 },
-  { symbol: 'SOL', price: 73.62, changePct: -1.8 },
 ];
 
 async function snapshot() {
   const stocks = await mockStockPriceSource.getQuotes(['AAPL', 'CSPX', 'MSFT', 'NVDA', 'VWCE']);
-  return buildSnapshot(MOCK_SOURCES, MOCK_POSITIONS, [...CRYPTO, ...stocks.quotes], '2026-11-12T16:00:00Z');
+  return buildSnapshot(SOURCES, POSITIONS, [...CRYPTO, ...stocks.quotes], '2026-11-12T16:00:00Z');
 }
 
 describe('buildSnapshot', () => {
   test('values positions with quotes and sums the total', async () => {
     const s = await snapshot();
     const btc = s.holdings.filter((h) => h.symbol === 'BTC');
-    expect(btc).toHaveLength(2);
+    expect(btc).toHaveLength(1);
     expect(btc[0]!.value).toBeCloseTo(0.4215 * 64_815.1, 1);
     expect(s.totalValue).toBeCloseTo(s.holdings.reduce((a, h) => a + h.value, 0), 1);
     expect(s.unpriced).toEqual([]);
   });
 
   test('excludes and reports positions without a price', () => {
-    const s = buildSnapshot(MOCK_SOURCES, MOCK_POSITIONS, CRYPTO.slice(0, 1), 'x');
+    const s = buildSnapshot(SOURCES, POSITIONS, CRYPTO.slice(0, 1), 'x');
     expect(s.holdings.every((h) => h.symbol === 'BTC')).toBe(true);
-    expect(s.unpriced).toEqual(expect.arrayContaining(['ETH', 'SOL', 'VWCE']));
+    expect(s.unpriced).toEqual(expect.arrayContaining(['ETH', 'VWCE']));
   });
 
   test('contains no cash positions', async () => {
@@ -40,20 +48,17 @@ describe('buildSnapshot', () => {
 });
 
 describe('buildValueHistory', () => {
-  const positions = MOCK_POSITIONS.filter((p) => p.assetClass === 'crypto');
+  const positions = CRYPTO_POSITIONS;
   const series: PriceSeries[] = [
     { symbol: 'BTC', points: [1, 2, 3, 4].map((t) => ({ t, close: 100 * t })) },
-    // SOL lists later and has fewer points: forward-filled, window starts at its first point.
-    { symbol: 'SOL', points: [{ t: 2, close: 10 }, { t: 4, close: 20 }] },
-    { symbol: 'ETH', points: [1, 2, 3, 4].map((t) => ({ t, close: 1 })) },
+    { symbol: 'ETH', points: [{ t: 2, close: 10 }, { t: 4, close: 20 }] },
   ];
 
   test('quantities × historical closes over the common window', () => {
     const h = buildValueHistory(positions, series, '1M');
-    const btcQty = 0.4215 + 0.085;
     expect(h.points.map((p) => p.timestamp)).toEqual([2, 3, 4]);
-    expect(h.points[0]!.value).toBeCloseTo(btcQty * 200 + 3.82 + 46.5 * 10, 1);
-    expect(h.points[1]!.value).toBeCloseTo(btcQty * 300 + 3.82 + 46.5 * 10, 1); // SOL forward-filled
+    expect(h.points[0]!.value).toBeCloseTo(0.4215 * 200 + 3.82 * 10, 1);
+    expect(h.points[1]!.value).toBeCloseTo(0.4215 * 300 + 3.82 * 10, 1);
     expect(h.change).toBeCloseTo(h.points[2]!.value - h.points[0]!.value, 1);
   });
 

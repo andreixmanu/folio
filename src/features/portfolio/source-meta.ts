@@ -12,7 +12,5 @@ export const SOURCE_ICONS: Record<SourceKind, ComponentProps<typeof Ionicons>['n
 
 export const SOURCE_COLORS: Record<string, string> = {
   ibkr: '#D81F26',
-  ledger: '#B98CFF',
-  metamask: '#F6851B',
-  binance: '#F0B90B',
+  tangem: '#35C2FF',
 };

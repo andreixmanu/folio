@@ -13,14 +13,21 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 /** GET JSON with a timeout; non-2xx responses become `ApiError` with the server message. */
 export async function getJson<T>(
   url: string,
-  { signal, timeoutMs = DEFAULT_TIMEOUT_MS }: { signal?: AbortSignal; timeoutMs?: number } = {},
+  {
+    signal,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    headers,
+  }: { signal?: AbortSignal; timeoutMs?: number; headers?: Record<string, string> } = {},
 ): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const onAbort = () => controller.abort();
   signal?.addEventListener('abort', onAbort);
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json', ...headers },
+    });
     const text = await res.text();
     let body: unknown = null;
     try {

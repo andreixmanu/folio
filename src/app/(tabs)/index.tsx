@@ -66,7 +66,11 @@ export default function PortfolioScreen() {
             pricesUpdatedAt={portfolio.pricesUpdatedAt}
           />
           <AllocationCard snapshot={portfolio.data} />
-          <HoldingsBySource snapshot={portfolio.data} />
+          <HoldingsBySource
+            snapshot={portfolio.data}
+            walletNote={portfolio.walletNote}
+            onRetryWallets={() => void portfolio.refetchWallets()}
+          />
         </>
       ) : portfolio.status === 'error' ? (
         <ErrorState

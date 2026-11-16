@@ -1,7 +1,6 @@
 /**
  * Domain types shared by the UI and every data source.
- * Phase 1 uses mock implementations; later phases plug in the Cloudflare Worker
- * (IBKR Flex Query, on-chain wallets, exchange read-only APIs, RSS proxy).
+ * Crypto quantities come from the Tangem wallet (`/wallets`); stocks are still mock IBKR.
  */
 
 export type TimeRange = '1D' | '1W' | '1M' | '1Y' | 'ALL';
@@ -21,7 +20,7 @@ export type Source = {
   id: string;
   name: string;
   kind: SourceKind;
-  /** e.g. "Flex Query", "Ethereum · 0x12…ab", "API sola lettura" */
+  /** e.g. "Flex Query", "Bitcoin · Ethereum · sola lettura" */
   detail: string;
 };
 
@@ -93,7 +92,7 @@ export type NewsArticle = {
 /** A position without market data: what you hold and where (quantities only). */
 export type Position = Omit<Holding, 'price' | 'value' | 'changePct'>;
 
-/** Where positions come from (mock now; IBKR Flex Query / wallets / a bank later). */
+/** Where positions come from (mock IBKR + Tangem wallet today). */
 export interface PositionsSource {
   getSources(): Promise<Source[]>;
   getPositions(): Promise<Position[]>;

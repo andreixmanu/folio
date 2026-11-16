@@ -6,10 +6,16 @@ const app = createApp();
 /**
  * Edge cache in front of the app (Cache API). In-isolate TTL caching in `createApp`
  * also coalesces upstream Kraken calls. Non-GET (including POST /chat) is never cached.
+ * `/wallets` and any request carrying `X-Folio-Token` skip the public Cache API so
+ * authenticated balances cannot leak to a later unauthenticated GET of the same URL.
  */
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     if (request.method !== 'GET' || typeof caches === 'undefined') return app.fetch(request, env, ctx);
+    const url = new URL(request.url);
+    if (url.pathname === '/wallets' || request.headers.has('X-Folio-Token')) {
+      return app.fetch(request, env, ctx);
+    }
     const cache = (caches as unknown as { default: Cache }).default;
     const hit = await cache.match(request);
     if (hit) return hit;

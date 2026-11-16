@@ -13,8 +13,9 @@ jest.mock('expo-image', () => {
 });
 
 describe('<AssetAvatar />', () => {
-  test('every mock holding has a bundled logo', () => {
-    const missing = [...new Set(MOCK_POSITIONS.map((p) => p.symbol))].filter((s) => !ASSET_ICONS[s]);
+  test('every mock holding and known crypto symbol has a bundled logo', () => {
+    const symbols = [...MOCK_POSITIONS.map((p) => p.symbol), 'BTC', 'ETH', 'USDC', 'USDT'];
+    const missing = [...new Set(symbols)].filter((s) => !ASSET_ICONS[s]);
     expect(missing).toEqual([]);
   });
 
