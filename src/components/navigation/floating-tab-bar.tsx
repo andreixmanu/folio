@@ -1,9 +1,11 @@
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, useWindowDimensions, View, type AccessibilityActionEvent, type LayoutChangeEvent } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Platform, Pressable, StyleSheet, useWindowDimensions, View, type AccessibilityActionEvent, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
+  Extrapolation,
+  interpolate,
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
@@ -31,11 +33,15 @@ const SWITCH_LABEL: Record<AppMode, string> = {
   invest: 'Passa a Investimenti',
 };
 
+/** Flex of the active tab. Inactive tabs are 1, so the pill takes about 3/7 of the bar. */
+const ACTIVE_FLEX = 3;
+
 function TabItem({
   label,
   accessibilityLabel,
   focused,
   icon,
+  pillColor,
   onPress,
   onLongPress,
   testID,
@@ -44,37 +50,55 @@ function TabItem({
   accessibilityLabel: string;
   focused: boolean;
   icon: React.ReactNode;
+  /** Low-opacity accent tint behind the active tab. */
+  pillColor: string;
   onPress: () => void;
   onLongPress: () => void;
   testID?: string;
 }) {
   const scale = useSharedValue(1);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  const active = useSharedValue(focused ? 1 : 0);
+
+  useEffect(() => {
+    active.set(withTiming(focused ? 1 : 0, timings.indicator));
+  }, [active, focused]);
+
+  const itemStyle = useAnimatedStyle(() => ({
+    flex: 1 + (ACTIVE_FLEX - 1) * active.get(),
+    backgroundColor: interpolateColor(active.get(), [0, 1], ['rgba(0,0,0,0)', pillColor]),
+  }));
+  const contentStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  const labelStyle = useAnimatedStyle(() => ({ opacity: active.get() }));
 
   return (
-    <Pressable
-      accessibilityRole="tab"
-      accessibilityState={{ selected: focused }}
-      accessibilityLabel={accessibilityLabel}
-      testID={testID}
-      onPress={onPress}
-      onLongPress={onLongPress}
-      onPressIn={() => scale.set(withTiming(0.96, timings.pressIn))}
-      onPressOut={() => scale.set(withTiming(1, timings.pressOut))}
-      style={{ flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.View style={[{ alignItems: 'center', gap: 2, width: '100%' }, style]}>
-        {icon}
-        <AppText
-          variant="micro"
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.75}
-          color={focused ? 'text' : 'textSecondary'}
-          style={{ width: '100%', textAlign: 'center', letterSpacing: 0 }}>
-          {label}
-        </AppText>
-      </Animated.View>
-    </Pressable>
+    <Animated.View style={[{ minWidth: 0, borderRadius: 999 }, itemStyle]}>
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityState={{ selected: focused }}
+        accessibilityLabel={accessibilityLabel}
+        testID={testID}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        onPressIn={() => scale.set(withTiming(0.96, timings.pressIn))}
+        onPressOut={() => scale.set(withTiming(1, timings.pressOut))}
+        style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Animated.View
+          style={[
+            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 8 },
+            contentStyle,
+          ]}>
+          {icon}
+          {/* Revolut-style: only the active tab spells its name; every tab keeps its a11y label. */}
+          {focused ? (
+            <Animated.View style={[{ flexShrink: 1 }, labelStyle]}>
+              <AppText variant="label" numberOfLines={1} color="accent" style={{ letterSpacing: 0 }}>
+                {label}
+              </AppText>
+            </Animated.View>
+          ) : null}
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -82,16 +106,11 @@ function GhostFace({ mode }: { mode: AppMode }) {
   const theme = useTheme();
   return (
     <View pointerEvents="none" style={{ flex: 1, flexDirection: 'row', padding: INNER_PAD }}>
-      {MODE_TABS[mode].map((tab) => (
-        <View key={tab.name} style={{ flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+      {MODE_TABS[mode].map((tab, index) => (
+        <View
+          key={tab.name}
+          style={{ flex: index === 0 ? ACTIVE_FLEX : 1, minWidth: 0, alignItems: 'center', justifyContent: 'center' }}>
           <Icon icon={tab.icon} size={22} color={theme.colors.textSecondary} />
-          <AppText
-            variant="micro"
-            numberOfLines={1}
-            color="textSecondary"
-            style={{ width: '100%', textAlign: 'center' }}>
-            {tab.label}
-          </AppText>
         </View>
       ))}
     </View>
@@ -112,10 +131,6 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
   // Edge-to-edge Android does not resize the window for the keyboard, so this
   // absolute bar would sit under it. Fade it out (no spring) until the keyboard closes.
   const hideForKeyboard = Platform.OS === 'android' && keyboardVisible;
-  const [barWidth, setBarWidth] = useState(0);
-  const count = state.routes.length;
-  const itemWidth = barWidth > 0 ? (barWidth - INNER_PAD * 2) / count : 0;
-  const indicatorX = useSharedValue(0);
   const barOpacity = useSharedValue(1);
   const progress = useSharedValue(0);
   const barWidthSV = useSharedValue(0);
@@ -123,18 +138,14 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const centreX = useSharedValue(windowWidth);
   const centreY = useSharedValue(windowHeight);
-  const accent = modeAccents[theme.scheme][mode].accent;
-  const otherAccent = modeAccents[theme.scheme][other].accent;
+  const accentMuted = modeAccents[theme.scheme][mode].accentMuted;
+  const otherAccentMuted = modeAccents[theme.scheme][other].accentMuted;
 
   useEffect(() => {
     const route = state.routes[state.index];
     if (!route) return;
     setLastRoute(mode, `/${route.name}`);
   }, [mode, setLastRoute, state.index, state.routes]);
-
-  useEffect(() => {
-    if (itemWidth > 0) indicatorX.set(withTiming(state.index * itemWidth, timings.indicator));
-  }, [state.index, itemWidth, indicatorX]);
 
   useEffect(() => {
     barOpacity.set(withTiming(hideForKeyboard ? 0 : 1, timings.fade));
@@ -192,49 +203,48 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
 
   const gesture = useMemo(() => Gesture.Exclusive(pan, longPress), [longPress, pan]);
 
-  const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: indicatorX.get() }],
-  }));
-
-  const indicatorColorStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(Math.abs(progress.get()), [0, 1], [accent, otherAccent]),
-  }));
-
-  const borderStyle = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(Math.abs(progress.get()), [0, 1], [accent, otherAccent]),
-  }));
 
   const keyboardStyle = useAnimatedStyle(() => ({
     opacity: barOpacity.get(),
   }));
 
+  // Cylinder faces: the outgoing set is gone by half way, the incoming one appears after it.
+  // Both sit in a clipped container, so the two sets never overlap on screen.
   const frontStyle = useAnimatedStyle(() => {
     const drag = progress.get();
     const width = barWidthSV.get();
     return {
-      opacity: 1 - Math.abs(drag) * 0.6,
+      opacity: interpolate(Math.abs(drag), [0, 0.5], [1, 0], Extrapolation.CLAMP),
       transform: [
         { perspective: 800 },
-        { rotateY: `${drag * 25}deg` },
         { translateX: drag * width * 0.35 },
+        { rotateY: `${drag * 25}deg` },
       ],
     };
   });
 
   const ghostStyle = useAnimatedStyle(() => {
     const drag = progress.get();
+    const width = barWidthSV.get();
     const sign = drag < 0 ? -1 : 1;
     return {
-      opacity: Math.abs(drag),
-      transform: [{ perspective: 800 }, { rotateY: `${(drag - sign) * 25}deg` }],
+      opacity: interpolate(Math.abs(drag), [0.5, 0.85], [0, 1], Extrapolation.CLAMP),
+      transform: [
+        { perspective: 800 },
+        { translateX: (drag - sign) * width * 0.35 },
+        { rotateY: `${(drag - sign) * 25}deg` },
+      ],
     };
   });
 
+  // The accent shifts toward the other mode while dragging (pill tint only, border stays neutral).
+  const tintStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(Math.abs(progress.get()), [0, 1], ['rgba(0,0,0,0)', otherAccentMuted]),
+  }));
+
   const onLayout = (event: LayoutChangeEvent) => {
     const width = event.nativeEvent.layout.width;
-    setBarWidth(width);
     barWidthSV.set(width);
-    indicatorX.set((state.index * (width - INNER_PAD * 2)) / count);
     updateCentre();
   };
 
@@ -264,26 +274,19 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
             alignItems: 'center',
             gap: theme.spacing.sm,
           }}>
-          <View style={{ flex: 1, height: theme.layout.tabBarHeight }}>
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                {
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  borderRadius: theme.radii.pill,
-                  backgroundColor: theme.colors.surfaceElevated,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  overflow: 'hidden',
-                },
-                ghostStyle,
-              ]}>
-              <GhostFace mode={other} />
-            </Animated.View>
+          {/* Outer: shadow, border and surface. Inner: clips both faces (shadows do not survive overflow hidden). */}
+          <View
+            style={[
+              {
+                flex: 1,
+                height: theme.layout.tabBarHeight,
+                borderRadius: theme.radii.pill,
+                backgroundColor: theme.colors.surfaceElevated,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              },
+              theme.elevation(3),
+            ]}>
             <GestureDetector gesture={gesture}>
               <Animated.View
                 ref={barRef as never}
@@ -292,74 +295,49 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
                 accessibilityActions={[{ name: 'switchMode', label: SWITCH_LABEL[other] }]}
                 onAccessibilityAction={onAccessibilityAction}
                 onLayout={onLayout}
-                style={[
-                  {
-                    height: '100%',
-                    flexDirection: 'row',
-                    padding: INNER_PAD,
-                    borderRadius: theme.radii.pill,
-                    backgroundColor: theme.colors.surfaceElevated,
-                    borderWidth: 1,
-                  },
-                  theme.elevation(3),
-                  borderStyle,
-                  frontStyle,
-                ]}>
-                {itemWidth > 0 ? (
-                  <View
-                    pointerEvents="none"
-                    style={{
-                      position: 'absolute',
-                      top: INNER_PAD,
-                      bottom: INNER_PAD,
-                      left: INNER_PAD,
-                      width: itemWidth,
-                    }}>
-                    <Animated.View
-                      style={[
-                        {
-                          flex: 1,
-                          borderRadius: theme.radii.pill,
-                        },
-                        indicatorColorStyle,
-                        indicatorStyle,
-                      ]}
-                    />
-                  </View>
-                ) : null}
-                {state.routes.map((route, index) => {
-                  const descriptor = descriptors[route.key];
-                  if (!descriptor) return null;
-                  const { options } = descriptor;
-                  const focused = index === state.index;
-                  const title = options.title ?? route.name;
-                  const label = typeof options.tabBarLabel === 'string' ? options.tabBarLabel : title;
-                  const accessibilityLabel = options.tabBarAccessibilityLabel ?? title;
-                  const color = focused ? theme.colors.text : theme.colors.textSecondary;
+                style={{ flex: 1, borderRadius: theme.radii.pill, overflow: 'hidden' }}>
+                <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, tintStyle]} />
+                <Animated.View
+                  pointerEvents="none"
+                  style={[StyleSheet.absoluteFill, ghostStyle]}>
+                  <GhostFace mode={other} />
+                </Animated.View>
+                <Animated.View style={[{ flex: 1, flexDirection: 'row', padding: INNER_PAD }, frontStyle]}>
+                  {state.routes.map((route, index) => {
+                    const descriptor = descriptors[route.key];
+                    if (!descriptor) return null;
+                    const { options } = descriptor;
+                    const focused = index === state.index;
+                    const title = options.title ?? route.name;
+                    const label = typeof options.tabBarLabel === 'string' ? options.tabBarLabel : title;
+                    const accessibilityLabel = options.tabBarAccessibilityLabel ?? title;
+                    const color = focused ? theme.colors.accent : theme.colors.textSecondary;
 
-                  return (
-                    <TabItem
-                      key={route.key}
-                      label={label}
-                      accessibilityLabel={accessibilityLabel}
-                      focused={focused}
-                      testID={options.tabBarButtonTestID}
-                      icon={options.tabBarIcon?.({ focused, color, size: 22 })}
-                      onPress={() => {
-                        const pressEvent = emitter.emit({
-                          type: 'tabPress',
-                          target: route.key,
-                          canPreventDefault: true,
-                        });
-                        if (!focused && !pressEvent.defaultPrevented) {
-                          haptics.selection();
-                          navigateToTab(route.key);
-                        }
-                      }}
-                      onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}
-                    />
-                  );
-                })}
+                    return (
+                      <TabItem
+                        key={route.key}
+                        label={label}
+                        accessibilityLabel={accessibilityLabel}
+                        focused={focused}
+                        pillColor={accentMuted}
+                        testID={options.tabBarButtonTestID}
+                        icon={options.tabBarIcon?.({ focused, color, size: 22 })}
+                        onPress={() => {
+                          const pressEvent = emitter.emit({
+                            type: 'tabPress',
+                            target: route.key,
+                            canPreventDefault: true,
+                          });
+                          if (!focused && !pressEvent.defaultPrevented) {
+                            haptics.selection();
+                            navigateToTab(route.key);
+                          }
+                        }}
+                        onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}
+                      />
+                    );
+                  })}
+                </Animated.View>
               </Animated.View>
             </GestureDetector>
           </View>
