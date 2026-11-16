@@ -30,7 +30,7 @@ import { useTheme } from '@/theme';
 
 const PERIOD_LABEL: Record<BudgetPeriod, string> = {
   '1W': 'Ultima settimana',
-  '1M': 'Ultimo mese',
+  '1M': 'Questo mese',
   '3M': 'Ultimi 3 mesi',
   '6M': 'Ultimi 6 mesi',
   '1Y': 'Ultimo anno',

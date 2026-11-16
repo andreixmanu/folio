@@ -140,11 +140,18 @@ describe('budget period analytics', () => {
     });
   });
 
-  test('periodComparison measures spend against the previous window', () => {
+  test('periodComparison measures 1M against the same days of last month', () => {
     const now = new Date('2026-11-16T12:00:00+01:00');
     const current = periodRange('1M', now);
-    const prior = previousRange(current);
+    expect(current).toEqual({ from: '2026-11-01', to: '2026-11-16' });
+    const prior = { from: '2026-10-01', to: '2026-10-16' };
     const txs = [
+      movement({
+        id: 'after-cutoff',
+        bookingDate: '2026-10-20',
+        amount: { amount: -500, currency: 'EUR' },
+        categoryId: 'groceries',
+      }),
       movement({
         id: 'now',
         bookingDate: current.to,

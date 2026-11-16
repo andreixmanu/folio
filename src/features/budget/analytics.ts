@@ -31,9 +31,13 @@ const PERIOD_DAYS: Record<BudgetPeriod, number> = {
   '1Y': 365,
 };
 
-/** Rolling window ending on `now`'s Rome calendar day, inclusive. */
+/**
+ * Window ending on `now`'s Rome calendar day, inclusive. `1M` is the calendar
+ * month to date, like Panoramica and Budget; the others are rolling windows.
+ */
 export function periodRange(period: BudgetPeriod, now: Date): DateRange {
   const to = toISODate(now);
+  if (period === '1M') return { from: startOfMonth(to), to };
   const from = addDays(to, -(PERIOD_DAYS[period] - 1));
   return { from, to };
 }
@@ -377,7 +381,11 @@ export type PeriodComparison = {
 /** Spend in `period` against the equal window immediately before it. */
 export function periodComparison(txs: readonly Transaction[], period: BudgetPeriod, now: Date): PeriodComparison {
   const current = periodRange(period, now);
-  const prior = previousRange(current);
+  // Month to date compares with the same days of last month (1–16 Nov vs 1–16 Oct).
+  const prior =
+    period === '1M'
+      ? { from: startOfMonth(addMonths(current.from, -1)), to: addMonths(current.to, -1) }
+      : previousRange(current);
   const spent = totalSpent(txs, current);
   const previous = totalSpent(txs, prior);
   const delta = fromCents(toCents(spent) - toCents(previous));

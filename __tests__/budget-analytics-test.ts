@@ -44,7 +44,7 @@ describe('money helpers', () => {
 describe('periodRange', () => {
   test('rolling windows end on the Rome day of now', () => {
     expect(periodRange('1W', NOV)).toEqual({ from: '2026-11-10', to: '2026-11-16' });
-    expect(periodRange('1M', NOV)).toEqual({ from: '2026-10-18', to: '2026-11-16' });
+    expect(periodRange('1M', NOV)).toEqual({ from: '2026-11-01', to: '2026-11-16' });
     expect(periodRange('3M', NOV)).toEqual({ from: '2026-08-19', to: '2026-11-16' });
     expect(periodRange('6M', NOV)).toEqual({ from: '2026-05-21', to: '2026-11-16' });
     expect(periodRange('1Y', NOV)).toEqual({ from: '2025-11-17', to: '2026-11-16' });
