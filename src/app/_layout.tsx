@@ -49,6 +49,9 @@ function AppShell() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: theme.colors.background },
+          // Cross-fade between Investimenti and Budget. No slide, no bounce.
+          animation: 'fade',
+          animationDuration: 220,
         }}
       />
     </NavigationThemeProvider>

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Platform, View, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { ModeSwitch } from '@/components/navigation/mode-switch';
 import { enterFade, useTheme } from '@/theme';
 
 import { Icon } from './icon';
@@ -11,13 +12,15 @@ import { AppText } from './text';
 
 export type ScreenHeaderProps = {
   title: string;
-  /** Small line above the title (greeting, date…). */
+  /** Small line above the title (greeting, date…). Sits beside the mode switch. */
   eyebrow?: string;
   right?: ReactNode;
+  /** Investimenti / Budget pill. On for every tab header. */
+  showModeSwitch?: boolean;
 };
 
 /** Large-title header in the Revolut style. */
-export function ScreenHeader({ title, eyebrow, right }: ScreenHeaderProps) {
+export function ScreenHeader({ title, eyebrow, right, showModeSwitch = true }: ScreenHeaderProps) {
   const theme = useTheme();
   const headerStyle: ViewStyle = {
     // Stay in normal flow. An entering animation must not leave this row absolute.
@@ -32,10 +35,25 @@ export function ScreenHeader({ title, eyebrow, right }: ScreenHeaderProps) {
   const body = (
     <>
       <View style={{ flex: 1, gap: 2 }}>
-        {eyebrow ? (
-          <AppText variant="caption" color="textSecondary">
-            {eyebrow}
-          </AppText>
+        {showModeSwitch || eyebrow ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+              minHeight: showModeSwitch ? 30 : undefined,
+            }}>
+            {showModeSwitch ? <ModeSwitch /> : null}
+            {eyebrow ? (
+              <AppText
+                variant="caption"
+                color="textSecondary"
+                numberOfLines={1}
+                style={{ flex: 1 }}>
+                {eyebrow}
+              </AppText>
+            ) : null}
+          </View>
         ) : null}
         <AppText variant="largeTitle" accessibilityRole="header">
           {title}

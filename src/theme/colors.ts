@@ -36,6 +36,45 @@ export type ColorTokens = {
   };
 };
 
+type ModeAccent = {
+  accent: string;
+  accentMuted: string;
+  onAccent: string;
+};
+
+export type AccentMode = 'invest' | 'budget';
+
+/**
+ * Per-mode accent. Invest keeps the original violet.
+ * Budget teal is light, so `onAccent` is deep green ink (white fails contrast).
+ */
+export const modeAccents: Record<'dark' | 'light', Record<AccentMode, ModeAccent>> = {
+  dark: {
+    invest: {
+      accent: '#7C6CFF',
+      accentMuted: 'rgba(124,108,255,0.18)',
+      onAccent: '#FFFFFF',
+    },
+    budget: {
+      accent: '#2EC4A6',
+      accentMuted: 'rgba(46,196,166,0.16)',
+      onAccent: '#041510',
+    },
+  },
+  light: {
+    invest: {
+      accent: '#5B4BFF',
+      accentMuted: 'rgba(91,75,255,0.12)',
+      onAccent: '#FFFFFF',
+    },
+    budget: {
+      accent: '#0E9F84',
+      accentMuted: 'rgba(14,159,132,0.12)',
+      onAccent: '#041510',
+    },
+  },
+};
+
 const chart = [
   '#7C6CFF',
   '#35C2FF',
@@ -58,9 +97,9 @@ export const darkColors: ColorTokens = {
   text: '#FFFFFF',
   textSecondary: '#9A9AA8',
   textTertiary: '#5E5E6B',
-  accent: '#7C6CFF',
-  accentMuted: 'rgba(124,108,255,0.18)',
-  onAccent: '#FFFFFF',
+  accent: modeAccents.dark.invest.accent,
+  accentMuted: modeAccents.dark.invest.accentMuted,
+  onAccent: modeAccents.dark.invest.onAccent,
   positive: '#2FD08A',
   positiveMuted: 'rgba(47,208,138,0.14)',
   negative: '#FF5C6C',
@@ -83,9 +122,9 @@ export const lightColors: ColorTokens = {
   text: '#0B0B10',
   textSecondary: '#6B6B78',
   textTertiary: '#A3A3AE',
-  accent: '#5B4BFF',
-  accentMuted: 'rgba(91,75,255,0.12)',
-  onAccent: '#FFFFFF',
+  accent: modeAccents.light.invest.accent,
+  accentMuted: modeAccents.light.invest.accentMuted,
+  onAccent: modeAccents.light.invest.onAccent,
   positive: '#12A86B',
   positiveMuted: 'rgba(18,168,107,0.12)',
   negative: '#E5384A',

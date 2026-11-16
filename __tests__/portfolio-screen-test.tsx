@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
-import PortfolioScreen from '@/app/(tabs)/index';
+import PortfolioScreen from '@/app/(invest)/portfolio';
 import { HoldingsBySource } from '@/features/portfolio/holdings-by-source';
 import { MOCK_POSITIONS, MOCK_SOURCES } from '@/services/mock/positions';
 import { mockStockPriceSource } from '@/services/mock/stock-prices';

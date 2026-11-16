@@ -1,9 +1,10 @@
 import { createContext, useContext, useMemo, type PropsWithChildren } from 'react';
 import { useColorScheme } from 'react-native';
 
+import { useModeStore, type AppMode } from '@/store/mode-store';
 import { useUiStore } from '@/store/ui-store';
 
-import { darkColors, lightColors, type ColorTokens } from './colors';
+import { darkColors, lightColors, modeAccents, type ColorTokens } from './colors';
 import { elevation } from './elevation';
 import { radii } from './radii';
 import { layout, spacing } from './spacing';
@@ -13,6 +14,8 @@ export type ColorSchemeName = 'dark' | 'light';
 
 export type Theme = {
   scheme: ColorSchemeName;
+  /** Investimenti or Budget. Drives the accent tokens. */
+  mode: AppMode;
   colors: ColorTokens;
   spacing: typeof spacing;
   radii: typeof radii;
@@ -22,10 +25,18 @@ export type Theme = {
   elevation: (level: 0 | 1 | 2 | 3) => ReturnType<typeof elevation>;
 };
 
-export function createTheme(scheme: ColorSchemeName): Theme {
-  const colors = scheme === 'dark' ? darkColors : lightColors;
+export function createTheme(scheme: ColorSchemeName, mode: AppMode = 'invest'): Theme {
+  const base = scheme === 'dark' ? darkColors : lightColors;
+  const accent = modeAccents[scheme][mode];
+  const colors: ColorTokens = {
+    ...base,
+    accent: accent.accent,
+    accentMuted: accent.accentMuted,
+    onAccent: accent.onAccent,
+  };
   return {
     scheme,
+    mode,
     colors,
     spacing,
     radii,
@@ -39,11 +50,12 @@ export function createTheme(scheme: ColorSchemeName): Theme {
 const ThemeContext = createContext<Theme>(createTheme('dark'));
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const mode = useUiStore((s) => s.themeMode);
+  const themeMode = useUiStore((s) => s.themeMode);
+  const appMode = useModeStore((s) => s.mode);
   const system = useColorScheme();
   const scheme: ColorSchemeName =
-    mode === 'system' ? (system === 'light' ? 'light' : 'dark') : mode;
-  const theme = useMemo(() => createTheme(scheme), [scheme]);
+    themeMode === 'system' ? (system === 'light' ? 'light' : 'dark') : themeMode;
+  const theme = useMemo(() => createTheme(scheme, appMode), [scheme, appMode]);
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
 }
 

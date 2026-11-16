@@ -3,7 +3,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { fetch as expoFetch } from 'expo/fetch';
 import { Dimensions, Keyboard, Platform, type KeyboardEvent } from 'react-native';
 
-import AssistantScreen from '@/app/(tabs)/assistant';
+import AssistantScreen from '@/app/(invest)/assistant';
 import { buildPortfolioContext } from '@/services/chat/context';
 import { useChatStore } from '@/services/chat/store';
 import type { PortfolioSnapshot } from '@/services/types';

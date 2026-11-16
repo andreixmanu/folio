@@ -5,7 +5,7 @@ import { FloatingTabBar } from '@/components/navigation/floating-tab-bar';
 import { TabIcon } from '@/components/navigation/tab-icon';
 import { useTheme } from '@/theme';
 
-export default function TabLayout() {
+export default function InvestLayout() {
   const theme = useTheme();
   return (
     <Tabs
@@ -18,7 +18,7 @@ export default function TabLayout() {
         sceneStyle: { backgroundColor: theme.colors.background },
       }}>
       <Tabs.Screen
-        name="index"
+        name="portfolio"
         options={{
           title: 'Portafoglio',
           tabBarButtonTestID: 'tab-portfolio',

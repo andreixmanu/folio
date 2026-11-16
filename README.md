@@ -27,7 +27,7 @@ and licence). `<AssetAvatar>` uses bundled icon → worker `/logo/:symbol` (stoc
 
 ```
 src/
-  app/                 Expo Router routes: (tabs)/index (Portfolio), news, assistant, settings
+  app/                 Expo Router: (invest) portfolio/news/assistant/settings, (budget) overview/transactions/analytics/budgets/budget-settings
   theme/               tokens: colors, spacing, radii, typography, motion, elevation + ThemeProvider
   components/ui/       IslandCard, ListRow, ChangeChip, SegmentedControl, FilterChips, AnimatedNumber, Screen…
   components/navigation/ FloatingTabBar (pill, detached, animated indicator)

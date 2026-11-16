@@ -69,7 +69,7 @@ function SoonBadge({ live = false }: { live?: boolean }) {
   );
 }
 
-export default function SettingsScreen() {
+export function SettingsScreen() {
   const theme = useTheme();
   const themeMode = useUiStore((s) => s.themeMode);
   const setThemeMode = useUiStore((s) => s.setThemeMode);

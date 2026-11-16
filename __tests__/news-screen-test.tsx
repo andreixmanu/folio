@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
-import NewsScreen from '@/app/(tabs)/news';
+import NewsScreen from '@/app/(invest)/news';
 import { resetInAppBrowserGuard } from '@/lib/open-in-app-browser';
 import { useUiStore } from '@/store/ui-store';
 
