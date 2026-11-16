@@ -40,6 +40,8 @@ function axisLabel(day: number, last: number): string | undefined {
 
 /** Wider than `spacing`, which is all gifted-charts gives each x-axis label. */
 const DAY_LABEL_WIDTH = 28;
+/** Height of the x-axis day labels plus a small gap before the legend. */
+const DAY_LABEL_CLEARANCE = 24;
 
 type AxisPoint = lineDataItem & { labelWidth?: number };
 
@@ -233,7 +235,8 @@ export function SpendCompareChart({
           flexDirection: 'row',
           alignItems: 'center',
           gap: theme.spacing.lg,
-          marginTop: theme.spacing.xs,
+          // Day labels render below the plot area; keep the legend clear of them.
+          marginTop: DAY_LABEL_CLEARANCE,
         }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
           <LegendMark color={accent} dashed={false} />

@@ -52,7 +52,9 @@ export function ChangeChip({
   const icon = direction === 'up' ? ArrowUpRight : direction === 'down' ? ArrowDownRight : Minus;
   const iconSize = size === 'sm' ? 11 : 13;
 
-  const pct = formatPercent(Math.abs(percent), { signed: false });
+  // At most one decimal, none when it would be ",0" (12% not 12,0%).
+  const pctDecimals = Math.round(Math.abs(percent) * 10) % 10 === 0 ? 0 : 1;
+  const pct = formatPercent(Math.abs(percent), { signed: false, decimals: pctDecimals });
   const amt =
     amount === undefined ? null : masked ? MASK : formatMoney(amount, currency, { signed: true });
   const label = amt ? `${amt} · ${pct}` : pct;

@@ -13,18 +13,18 @@ import { renderWithProviders } from '../test/test-utils';
 describe('<ChangeChip />', () => {
   test('shows a positive change with amount and percent', async () => {
     await renderWithProviders(<ChangeChip percent={4.6} amount={7113.62} testID="chip" />);
-    expect(screen.getByTestId('chip').props.accessibilityLabel).toMatch(/^In rialzo \+7\.113,62\s€ · 4,60%$/);
+    expect(screen.getByTestId('chip').props.accessibilityLabel).toMatch(/^In rialzo \+7\.113,62\s€ · 4,6%$/);
   });
 
   test('masks the amount in privacy mode', async () => {
     await renderWithProviders(<ChangeChip percent={-1.2} amount={-50} masked testID="chip" />);
-    expect(screen.getByText('•••• · 1,20%')).toBeTruthy();
+    expect(screen.getByText('•••• · 1,2%')).toBeTruthy();
     expect(screen.getByTestId('chip').props.accessibilityLabel).toMatch(/^In ribasso/);
   });
 
   test('spend tone treats an increase as negative', async () => {
     await renderWithProviders(<ChangeChip tone="spend" percent={12} amount={30} testID="chip" />);
-    expect(screen.getByTestId('chip').props.accessibilityLabel).toMatch(/^Spesa in aumento \+30,00\s€ · 12,00%$/);
+    expect(screen.getByTestId('chip').props.accessibilityLabel).toMatch(/^Spesa in aumento \+30,00\s€ · 12%$/);
   });
 });
 
