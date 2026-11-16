@@ -1,9 +1,10 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { ChevronRight } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { useTheme } from '@/theme';
 
+import { Icon } from './icon';
 import { PressableScale } from './pressable-scale';
 import { AppText } from './text';
 
@@ -67,7 +68,7 @@ export function ListRow({
         </View>
       )}
       {showChevron ? (
-        <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
+        <Icon icon={ChevronRight} size={18} color={theme.colors.textTertiary} />
       ) : null}
     </View>
   );

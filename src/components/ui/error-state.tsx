@@ -1,8 +1,9 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { CloudOff } from 'lucide-react-native';
 import { View } from 'react-native';
 
 import { useTheme } from '@/theme';
 
+import { Icon } from './icon';
 import { IslandCard } from './island-card';
 import { PressableScale } from './pressable-scale';
 import { AppText } from './text';
@@ -24,7 +25,7 @@ export function ErrorState({
   const theme = useTheme();
   const content = (
     <View style={{ alignItems: 'center', gap: theme.spacing.sm, paddingVertical: compact ? 0 : theme.spacing.md }} testID={testID}>
-      <Ionicons name="cloud-offline-outline" size={compact ? 20 : 26} color={theme.colors.textSecondary} />
+      <Icon icon={CloudOff} size={compact ? 20 : 26} color={theme.colors.textSecondary} />
       <AppText variant={compact ? 'label' : 'headline'} align="center">
         {title}
       </AppText>

@@ -1,7 +1,7 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { ArrowUp, Square } from 'lucide-react-native';
 import { TextInput, View } from 'react-native';
 
-import { PressableScale } from '@/components/ui';
+import { Icon, PressableScale } from '@/components/ui';
 import { useTheme } from '@/theme';
 
 const MAX_INPUT_HEIGHT = 20 * 5;
@@ -22,6 +22,7 @@ export function Composer({
   const theme = useTheme();
   const canSend = value.trim().length > 0;
   const active = streaming || canSend;
+  const tint = active ? theme.colors.onAccent : theme.colors.textSecondary;
 
   return (
     <View
@@ -79,10 +80,11 @@ export function Composer({
           justifyContent: 'center',
           backgroundColor: active ? theme.colors.accent : theme.colors.surfaceMuted,
         }}>
-        <Ionicons
-          name={streaming ? 'stop' : 'arrow-up'}
+        <Icon
+          icon={streaming ? Square : ArrowUp}
           size={18}
-          color={active ? theme.colors.onAccent : theme.colors.textSecondary}
+          color={tint}
+          fill={streaming ? tint : undefined}
         />
       </PressableScale>
     </View>

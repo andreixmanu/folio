@@ -1,6 +1,6 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { useState, type ComponentProps } from 'react';
+import type { LucideIcon } from 'lucide-react-native';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { resolveApiBaseUrl } from '@/services/api/config';
@@ -8,6 +8,7 @@ import type { AssetClass } from '@/services/types';
 import { useTheme } from '@/theme';
 
 import { ASSET_ICONS } from './asset-icons.generated';
+import { Icon } from './icon';
 import { AppText } from './text';
 
 const SYMBOL_COLORS: Record<string, string> = {
@@ -20,8 +21,6 @@ const SYMBOL_COLORS: Record<string, string> = {
   VWCE: '#C8102E',
   CSPX: '#7C6CFF',
 };
-
-type IconName = ComponentProps<typeof Ionicons>['name'];
 
 /** Light disc behind remote logos, so dark marks stay readable in dark mode. */
 const LOGO_DISC = '#F4F4F6';
@@ -121,11 +120,11 @@ export function InitialsAvatar({ symbol, size = 36 }: { symbol: string; size?: n
 
 /** Rounded-square icon badge used for sources and settings rows. */
 export function IconBadge({
-  name,
+  icon,
   color,
   size = 36,
 }: {
-  name: IconName;
+  icon: LucideIcon;
   color?: string;
   size?: number;
 }) {
@@ -142,7 +141,7 @@ export function IconBadge({
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-      <Ionicons name={name} size={size * 0.5} color={tint} />
+      <Icon icon={icon} size={size * 0.5} color={tint} />
     </View>
   );
 }

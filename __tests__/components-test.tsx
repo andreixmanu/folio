@@ -1,6 +1,10 @@
 import { fireEvent, screen } from '@testing-library/react-native';
+import { ChartPie, Eye } from 'lucide-react-native';
 
+import { TabIcon } from '@/components/navigation/tab-icon';
 import { ChangeChip } from '@/components/ui/change-chip';
+import { Icon } from '@/components/ui/icon';
+import { IconButton } from '@/components/ui/screen-header';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { TIME_RANGES } from '@/services/types';
 
@@ -36,6 +40,46 @@ describe('<SegmentedControl />', () => {
     // Pressing the already-selected option is a no-op.
     await fireEvent.press(screen.getByTestId('range-1M'));
     expect(onChange).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('<Icon />', () => {
+  test('renders a Lucide icon', async () => {
+    await renderWithProviders(
+      <Icon icon={Eye} size={18} color="#FFFFFF" accessibilityLabel="Mostra" testID="icon-eye" />,
+    );
+    expect(screen.getByTestId('icon-eye')).toBeTruthy();
+    expect(screen.getByLabelText('Mostra')).toBeTruthy();
+  });
+});
+
+describe('<IconButton />', () => {
+  test('renders a Lucide icon action', async () => {
+    const onPress = jest.fn();
+    await renderWithProviders(
+      <IconButton icon={Eye} accessibilityLabel="Nascondi saldi" onPress={onPress} />,
+    );
+    const button = screen.getByLabelText('Nascondi saldi');
+    expect(button).toBeTruthy();
+    await fireEvent.press(button);
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('<TabIcon />', () => {
+  test('uses a heavier Lucide stroke when focused', async () => {
+    await renderWithProviders(
+      <TabIcon icon={ChartPie} size={22} color="#FFFFFF" focused testID="tab-icon" />,
+    );
+    expect(screen.getByTestId('tab-icon')).toBeTruthy();
+    expect(screen.getByTestId('tab-icon').props.strokeWidth).toBe(2.25);
+  });
+
+  test('uses the default Lucide stroke when inactive', async () => {
+    await renderWithProviders(
+      <TabIcon icon={ChartPie} size={22} color="#9A9AA8" focused={false} testID="tab-icon" />,
+    );
+    expect(screen.getByTestId('tab-icon').props.strokeWidth).toBe(1.75);
   });
 });
 

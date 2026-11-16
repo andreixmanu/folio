@@ -1,3 +1,4 @@
+import { SquarePen } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import Animated, {
@@ -168,7 +169,7 @@ export default function AssistantScreen() {
           title="Assistente"
           right={
             <IconButton
-              name="create-outline"
+              icon={SquarePen}
               accessibilityLabel="Nuova chat"
               disabled={messages.length === 0}
               onPress={newChat}

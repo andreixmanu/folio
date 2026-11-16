@@ -1,22 +1,9 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router/js-tabs';
-import type { ComponentProps } from 'react';
-import type { ColorValue } from 'react-native';
+import { ChartPie, Newspaper, Settings, Sparkles } from 'lucide-react-native';
 
 import { FloatingTabBar } from '@/components/navigation/floating-tab-bar';
+import { TabIcon } from '@/components/navigation/tab-icon';
 import { useTheme } from '@/theme';
-
-function TabIcon({
-  name,
-  size,
-  color,
-}: {
-  name: ComponentProps<typeof Ionicons>['name'];
-  size: number;
-  color: ColorValue;
-}) {
-  return <Ionicons name={name} size={size} color={typeof color === 'string' ? color : undefined} />;
-}
 
 export default function TabLayout() {
   const theme = useTheme();
@@ -36,7 +23,7 @@ export default function TabLayout() {
           title: 'Portafoglio',
           tabBarButtonTestID: 'tab-portfolio',
           tabBarIcon: ({ focused, color, size }) => (
-            <TabIcon name={focused ? 'pie-chart' : 'pie-chart-outline'} size={size} color={color} />
+            <TabIcon icon={ChartPie} size={size} color={color} focused={focused} />
           ),
         }}
       />
@@ -46,7 +33,7 @@ export default function TabLayout() {
           title: 'Notizie',
           tabBarButtonTestID: 'tab-news',
           tabBarIcon: ({ focused, color, size }) => (
-            <TabIcon name={focused ? 'newspaper' : 'newspaper-outline'} size={size} color={color} />
+            <TabIcon icon={Newspaper} size={size} color={color} focused={focused} />
           ),
         }}
       />
@@ -56,7 +43,7 @@ export default function TabLayout() {
           title: 'Assistente',
           tabBarButtonTestID: 'tab-assistant',
           tabBarIcon: ({ focused, color, size }) => (
-            <TabIcon name={focused ? 'sparkles' : 'sparkles-outline'} size={size} color={color} />
+            <TabIcon icon={Sparkles} size={size} color={color} focused={focused} />
           ),
         }}
       />
@@ -66,7 +53,7 @@ export default function TabLayout() {
           title: 'Impostazioni',
           tabBarButtonTestID: 'tab-settings',
           tabBarIcon: ({ focused, color, size }) => (
-            <TabIcon name={focused ? 'settings' : 'settings-outline'} size={size} color={color} />
+            <TabIcon icon={Settings} size={size} color={color} focused={focused} />
           ),
         }}
       />

@@ -1,4 +1,16 @@
 import Constants from 'expo-constants';
+import {
+  Activity,
+  ArrowLeftRight,
+  Contrast,
+  EyeOff,
+  Info,
+  Landmark,
+  Rss,
+  Sparkles,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { Fragment } from 'react';
 import { Switch, View } from 'react-native';
 
@@ -21,17 +33,17 @@ type FutureSource = {
   key: string;
   title: string;
   subtitle: string;
-  icon: React.ComponentProps<typeof IconBadge>['name'];
+  icon: LucideIcon;
   color: string;
   live?: boolean;
 };
 
 const FUTURE_SOURCES: FutureSource[] = [
-  { key: 'ibkr', title: 'Interactive Brokers', subtitle: 'Flex Query · sola lettura', icon: 'business', color: '#D81F26' },
-  { key: 'wallets', title: 'Wallet crypto', subtitle: 'Indirizzi on-chain (BTC, ETH, SOL)', icon: 'wallet', color: '#B98CFF' },
-  { key: 'exchanges', title: 'Exchange', subtitle: 'API in sola lettura', icon: 'swap-horizontal', color: '#F0B90B' },
-  { key: 'prices', title: 'Prezzi', subtitle: 'Crypto live da Kraken · azioni simulate', icon: 'pulse', color: '#2FD08A', live: true },
-  { key: 'rss', title: 'Feed RSS', subtitle: 'Testate finanziarie e crypto', icon: 'logo-rss', color: '#FF8A4C' },
+  { key: 'ibkr', title: 'Interactive Brokers', subtitle: 'Flex Query · sola lettura', icon: Landmark, color: '#D81F26' },
+  { key: 'wallets', title: 'Wallet crypto', subtitle: 'Indirizzi on-chain (BTC, ETH, SOL)', icon: Wallet, color: '#B98CFF' },
+  { key: 'exchanges', title: 'Exchange', subtitle: 'API in sola lettura', icon: ArrowLeftRight, color: '#F0B90B' },
+  { key: 'prices', title: 'Prezzi', subtitle: 'Crypto live da Kraken · azioni simulate', icon: Activity, color: '#2FD08A', live: true },
+  { key: 'rss', title: 'Feed RSS', subtitle: 'Testate finanziarie e crypto', icon: Rss, color: '#FF8A4C' },
 ];
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
@@ -74,7 +86,7 @@ export default function SettingsScreen() {
           <Fragment key={s.key}>
             {i > 0 ? <RowSeparator /> : null}
             <ListRow
-              leading={<IconBadge name={s.icon} color={s.color} />}
+              leading={<IconBadge icon={s.icon} color={s.color} />}
               title={s.title}
               subtitle={s.subtitle}
               accessory={<SoonBadge live={s.live} />}
@@ -85,7 +97,7 @@ export default function SettingsScreen() {
         ))}
         <RowSeparator />
         <ListRow
-          leading={<IconBadge name="sparkles" color={theme.colors.accent} />}
+          leading={<IconBadge icon={Sparkles} color={theme.colors.accent} />}
           title="Assistente"
           subtitle="xAI · Grok"
         />
@@ -100,7 +112,7 @@ export default function SettingsScreen() {
             gap: theme.spacing.md,
             paddingVertical: 10,
           }}>
-          <IconBadge name="contrast" color={theme.colors.accent} />
+          <IconBadge icon={Contrast} color={theme.colors.accent} />
           <AppText variant="bodyStrong" style={{ flex: 1 }}>
             Tema
           </AppText>
@@ -110,7 +122,7 @@ export default function SettingsScreen() {
         </View>
         <RowSeparator />
         <ListRow
-          leading={<IconBadge name="eye-off" color={theme.colors.accent} />}
+          leading={<IconBadge icon={EyeOff} color={theme.colors.accent} />}
           title="Nascondi saldi"
           subtitle="Maschera importi e quantità"
           accessory={
@@ -127,7 +139,7 @@ export default function SettingsScreen() {
         />
         <RowSeparator />
         <ListRow
-          leading={<IconBadge name="information-circle" color={theme.colors.textSecondary} />}
+          leading={<IconBadge icon={Info} color={theme.colors.textSecondary} />}
           title="Versione"
           subtitle="Fase 1 · dati di esempio"
           value={Constants.expoConfig?.version ?? '0.1.0'}

@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from 'lucide-react-native';
 import { View } from 'react-native';
 
 import {
@@ -50,7 +51,7 @@ export default function PortfolioScreen() {
         right={
           <>
             <IconButton
-              name={hideBalances ? 'eye-off-outline' : 'eye-outline'}
+              icon={hideBalances ? EyeOff : Eye}
               accessibilityLabel={hideBalances ? 'Mostra saldi' : 'Nascondi saldi'}
               onPress={toggleHideBalances}
             />

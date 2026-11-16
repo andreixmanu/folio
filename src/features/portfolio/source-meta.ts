@@ -1,13 +1,12 @@
-import type Ionicons from '@expo/vector-icons/Ionicons';
-import type { ComponentProps } from 'react';
+import { ArrowLeftRight, Building2, Landmark, Wallet, type LucideIcon } from 'lucide-react-native';
 
 import type { SourceKind } from '@/services/types';
 
-export const SOURCE_ICONS: Record<SourceKind, ComponentProps<typeof Ionicons>['name']> = {
-  broker: 'business',
-  wallet: 'wallet',
-  exchange: 'swap-horizontal',
-  bank: 'card',
+export const SOURCE_ICONS: Record<SourceKind, LucideIcon> = {
+  broker: Landmark,
+  wallet: Wallet,
+  exchange: ArrowLeftRight,
+  bank: Building2,
 };
 
 export const SOURCE_COLORS: Record<string, string> = {

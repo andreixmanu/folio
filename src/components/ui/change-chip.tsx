@@ -1,9 +1,10 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react-native';
 import { View } from 'react-native';
 
 import { formatMoney, formatPercent, MASK } from '@/lib/format';
 import { useTheme } from '@/theme';
 
+import { Icon } from './icon';
 import { AppText } from './text';
 
 export type ChangeChipProps = {
@@ -40,7 +41,7 @@ export function ChangeChip({
       : direction === 'down'
         ? theme.colors.negativeMuted
         : theme.colors.surfaceMuted;
-  const icon = direction === 'up' ? 'arrow-up' : direction === 'down' ? 'arrow-down' : 'remove';
+  const icon = direction === 'up' ? ArrowUpRight : direction === 'down' ? ArrowDownRight : Minus;
   const iconSize = size === 'sm' ? 11 : 13;
 
   const pct = formatPercent(Math.abs(percent), { signed: false });
@@ -66,7 +67,7 @@ export function ChangeChip({
           paddingVertical: size === 'sm' ? 2 : 5,
         },
       ]}>
-      <Ionicons name={icon} size={iconSize} color={theme.colors[fg]} />
+      <Icon icon={icon} size={iconSize} color={theme.colors[fg]} />
       <AppText variant={size === 'sm' ? 'micro' : 'label'} color={fg} tabular>
         {label}
       </AppText>

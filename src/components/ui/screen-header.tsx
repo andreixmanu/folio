@@ -1,10 +1,11 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ComponentProps, ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react-native';
+import type { ReactNode } from 'react';
 import { Platform, View, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { enterFade, useTheme } from '@/theme';
 
+import { Icon } from './icon';
 import { PressableScale } from './pressable-scale';
 import { AppText } from './text';
 
@@ -73,12 +74,12 @@ export function ScreenHeader({ title, eyebrow, right }: ScreenHeaderProps) {
 
 /** Round icon button for header actions. */
 export function IconButton({
-  name,
+  icon,
   onPress,
   accessibilityLabel,
   disabled = false,
 }: {
-  name: ComponentProps<typeof Ionicons>['name'];
+  icon: LucideIcon;
   onPress?: () => void;
   accessibilityLabel: string;
   disabled?: boolean;
@@ -104,7 +105,7 @@ export function IconButton({
         borderColor: theme.colors.border,
         opacity: disabled ? 0.4 : 1,
       }}>
-      <Ionicons name={name} size={18} color={theme.colors.text} />
+      <Icon icon={icon} size={18} color={theme.colors.text} />
     </PressableScale>
   );
 }

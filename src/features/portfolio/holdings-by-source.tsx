@@ -60,7 +60,7 @@ export function HoldingsBySource({
               borderRadius: theme.radii.sm,
               backgroundColor: theme.colors.surfaceMuted,
             }}>
-            <IconBadge name={SOURCE_ICONS[source.kind]} color={SOURCE_COLORS[source.id]} size={26} />
+            <IconBadge icon={SOURCE_ICONS[source.kind]} color={SOURCE_COLORS[source.id]} size={26} />
             <View style={{ flex: 1 }}>
               <AppText variant="label" numberOfLines={1}>
                 {source.name}

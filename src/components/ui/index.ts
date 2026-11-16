@@ -3,6 +3,7 @@ export * from './asset-avatar';
 export * from './change-chip';
 export * from './filter-chips';
 export * from './error-state';
+export * from './icon';
 export * from './island-card';
 export * from './list-row';
 export * from './live-indicator';
