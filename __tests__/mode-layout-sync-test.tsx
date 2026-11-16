@@ -6,7 +6,6 @@ import { Text, View } from 'react-native';
 
 import BudgetLayout from '@/app/(budget)/_layout';
 import InvestLayout from '@/app/(invest)/_layout';
-import { ModeSwitch } from '@/components/navigation/mode-switch';
 import { useModeStore } from '@/store/mode-store';
 import { useUiStore } from '@/store/ui-store';
 import { ThemeProvider, useTheme } from '@/theme';
@@ -26,7 +25,6 @@ function Probe() {
   const theme = useTheme();
   return (
     <View>
-      <ModeSwitch />
       <Text testID="accent">{theme.colors.accent}</Text>
     </View>
   );
@@ -74,8 +72,7 @@ describe('mode follows the open route group', () => {
       expect(useModeStore.getState().mode).toBe('budget');
       expect(screen.getByTestId('accent').props.children).toBe('#2EC4A6');
     });
-    expect(screen.getByTestId('mode-budget').props.accessibilityState).toMatchObject({ selected: true });
-    expect(screen.getByTestId('mode-invest').props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.getByTestId('mode-circle').props.accessibilityLabel).toBe('Passa a Investimenti');
   });
 
   test('opening /portfolio forces invest mode and the violet accent', async () => {
@@ -87,7 +84,6 @@ describe('mode follows the open route group', () => {
       expect(useModeStore.getState().mode).toBe('invest');
       expect(screen.getByTestId('accent').props.children).toBe('#7C6CFF');
     });
-    expect(screen.getByTestId('mode-invest').props.accessibilityState).toMatchObject({ selected: true });
-    expect(screen.getByTestId('mode-budget').props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.getByTestId('mode-circle').props.accessibilityLabel).toBe('Passa a Budget');
   });
 });

@@ -40,7 +40,7 @@ export default function NewsScreen() {
 
   return (
     <Screen testID="news-screen" refreshing={news.isRefetching} onRefresh={() => void news.refetch()}>
-      <ScreenHeader eyebrow="Mercati, crypto e Italia" title="Notizie" />
+      <ScreenHeader title="Notizie" />
       <FilterChips options={FILTERS} value={filter} onChange={setFilter} testID="news-filter" />
 
       {news.isError && !news.data ? (

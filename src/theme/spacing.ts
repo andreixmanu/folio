@@ -20,6 +20,7 @@ export const layout = {
   /** Max content width on web / tablets so islands do not stretch edge to edge. */
   maxContentWidth: 560,
   tabBarHeight: 68,
-  tabBarSideInset: spacing.xxl,
+  // Matches the screen padding: the bar shares the row with the mode circle.
+  tabBarSideInset: spacing.lg,
   tabBarBottomGap: spacing.md,
 } as const;

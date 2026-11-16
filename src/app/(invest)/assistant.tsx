@@ -165,7 +165,6 @@ export default function AssistantScreen() {
           paddingHorizontal: theme.layout.screenPadding,
         }}>
         <ScreenHeader
-          eyebrow="Mercati e portafoglio"
           title="Assistente"
           right={
             <IconButton

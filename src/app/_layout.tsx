@@ -13,6 +13,7 @@ import * as SystemUI from 'expo-system-ui';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ModeTransitionOverlay } from '@/components/navigation/mode-transition-overlay';
 import { createQueryClient, useAppStateFocus } from '@/services/query-client';
 import { ThemeProvider, useTheme } from '@/theme';
 
@@ -57,6 +58,7 @@ function AppShell() {
         <Stack.Screen name="transaction/[id]" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="category/[id]" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
       </Stack>
+      <ModeTransitionOverlay />
     </NavigationThemeProvider>
   );
 }

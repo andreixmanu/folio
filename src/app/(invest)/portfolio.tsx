@@ -46,7 +46,6 @@ export default function PortfolioScreen() {
       refreshing={portfolio.isRefetching}
       onRefresh={() => void portfolio.refetch()}>
       <ScreenHeader
-        eyebrow="Ciao, Andrei"
         title="Portafoglio"
         right={
           <>

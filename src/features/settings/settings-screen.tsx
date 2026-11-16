@@ -78,7 +78,7 @@ export function SettingsScreen() {
 
   return (
     <Screen testID="settings-screen">
-      <ScreenHeader eyebrow="Folio" title="Impostazioni" />
+      <ScreenHeader title="Impostazioni" />
 
       <SectionTitle title="Fonti dati" />
       <IslandCard index={0}>

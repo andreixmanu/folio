@@ -75,7 +75,7 @@ describe('budget overview', () => {
 
     expect(screen.getByTestId('budget-overview-screen')).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Panoramica' })).toBeTruthy();
-    expect(screen.getByTestId('mode-switch')).toBeTruthy();
+    expect(screen.queryByTestId('mode-switch')).toBeNull();
 
     expect(await screen.findByTestId('budget-total')).toBeTruthy();
     const now = new Date();

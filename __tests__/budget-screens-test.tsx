@@ -47,7 +47,7 @@ describe('budget placeholders', () => {
     expect(screen.getByTestId(testID)).toBeTruthy();
     expect(screen.getByRole('header', { name: title })).toBeTruthy();
     expect(screen.queryByText('In arrivo')).toBeNull();
-    expect(screen.getByTestId('mode-switch')).toBeTruthy();
+    expect(screen.queryByTestId('mode-switch')).toBeNull();
     await screen.findByTestId('budget-summary');
     await view.unmount();
   });
@@ -56,7 +56,7 @@ describe('budget placeholders', () => {
     await renderWithProviders(<BudgetSettingsRoute />);
     expect(screen.getByTestId('settings-screen')).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Impostazioni' })).toBeTruthy();
-    expect(screen.getByTestId('mode-switch')).toBeTruthy();
+    expect(screen.queryByTestId('mode-switch')).toBeNull();
   });
 });
 
