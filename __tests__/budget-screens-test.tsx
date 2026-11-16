@@ -1,7 +1,8 @@
-import { fireEvent, screen } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { Stack } from 'expo-router';
 import { renderRouter } from 'expo-router/testing-library';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import AnalyticsScreen from '@/app/(budget)/analytics';
 import BudgetLayout from '@/app/(budget)/_layout';
@@ -9,6 +10,7 @@ import BudgetSettingsRoute from '@/app/(budget)/budget-settings';
 import BudgetsScreen from '@/app/(budget)/budgets';
 import OverviewScreen from '@/app/(budget)/overview';
 import TransactionsScreen from '@/app/(budget)/transactions';
+import { ThemeProvider } from '@/theme';
 
 import { renderWithProviders } from '../test/test-utils';
 
@@ -23,8 +25,18 @@ function RootLayout() {
   return <Stack screenOptions={{ headerShown: false }} />;
 }
 
+function RouterProviders({ children }: { children: ReactNode }) {
+  const [client] = useState(
+    () => new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } }),
+  );
+  return (
+    <QueryClientProvider client={client}>
+      <ThemeProvider>{children}</ThemeProvider>
+    </QueryClientProvider>
+  );
+}
+
 const placeholders: { screen: () => ReactNode; title: string; testID: string }[] = [
-  { screen: () => <OverviewScreen />, title: 'Panoramica', testID: 'budget-overview-screen' },
   { screen: () => <TransactionsScreen />, title: 'Movimenti', testID: 'budget-transactions-screen' },
   { screen: () => <AnalyticsScreen />, title: 'Analisi', testID: 'budget-analytics-screen' },
   { screen: () => <BudgetsScreen />, title: 'Budget', testID: 'budget-budgets-screen' },
@@ -63,7 +75,7 @@ describe('budget tabs', () => {
         '(budget)/budgets': BudgetsScreen,
         '(budget)/budget-settings': BudgetSettingsRoute,
       },
-      { initialUrl: '/overview' },
+      { initialUrl: '/overview', wrapper: RouterProviders },
     );
 
     expect(screen.getByTestId('tab-overview')).toBeTruthy();
@@ -72,7 +84,13 @@ describe('budget tabs', () => {
     expect(screen.getByTestId('tab-budgets')).toBeTruthy();
     expect(screen.getByTestId('tab-budget-settings')).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Panoramica' })).toBeTruthy();
-    expect(screen.getByText('In arrivo')).toBeTruthy();
+    await waitFor(
+      () => {
+        expect(screen.getByText('Saldo totale')).toBeTruthy();
+      },
+      { timeout: 4000 },
+    );
+    expect(screen.queryByText('In arrivo')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('tab-transactions'));
     expect(screen.getByRole('header', { name: 'Movimenti' })).toBeTruthy();

@@ -21,6 +21,11 @@ describe('<ChangeChip />', () => {
     expect(screen.getByText('•••• · 1,20%')).toBeTruthy();
     expect(screen.getByTestId('chip').props.accessibilityLabel).toMatch(/^In ribasso/);
   });
+
+  test('spend tone treats an increase as negative', async () => {
+    await renderWithProviders(<ChangeChip tone="spend" percent={12} amount={30} testID="chip" />);
+    expect(screen.getByTestId('chip').props.accessibilityLabel).toMatch(/^Spesa in aumento \+30,00\s€ · 12,00%$/);
+  });
 });
 
 describe('<SegmentedControl />', () => {

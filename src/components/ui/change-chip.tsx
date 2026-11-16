@@ -18,10 +18,15 @@ export type ChangeChipProps = {
   masked?: boolean;
   /** Plain variant without background, for dense rows. */
   variant?: 'filled' | 'plain';
+  /**
+   * `delta`: an increase is positive (a gain).
+   * `spend`: an increase is negative (more money left the account).
+   */
+  tone?: 'delta' | 'spend';
   testID?: string;
 };
 
-/** Amount / percentage change pill: green for gains, red for losses, neutral for flat. */
+/** Amount / percentage change pill. `tone="spend"` treats an increase as negative. */
 export function ChangeChip({
   percent,
   amount,
@@ -29,16 +34,19 @@ export function ChangeChip({
   size = 'md',
   masked = false,
   variant = 'filled',
+  tone = 'delta',
   testID,
 }: ChangeChipProps) {
   const theme = useTheme();
   const direction = percent > 0.004 ? 'up' : percent < -0.004 ? 'down' : 'flat';
-  const fg =
-    direction === 'up' ? 'positive' : direction === 'down' ? 'negative' : 'textSecondary';
+  const increased = direction === 'up';
+  const goodNews = direction === 'flat' ? false : tone === 'spend' ? !increased : increased;
+  const sentiment = direction === 'flat' ? 'neutral' : goodNews ? 'positive' : 'negative';
+  const fg = sentiment === 'neutral' ? 'textSecondary' : sentiment;
   const bg =
-    direction === 'up'
+    sentiment === 'positive'
       ? theme.colors.positiveMuted
-      : direction === 'down'
+      : sentiment === 'negative'
         ? theme.colors.negativeMuted
         : theme.colors.surfaceMuted;
   const icon = direction === 'up' ? ArrowUpRight : direction === 'down' ? ArrowDownRight : Minus;
@@ -48,11 +56,23 @@ export function ChangeChip({
   const amt =
     amount === undefined ? null : masked ? MASK : formatMoney(amount, currency, { signed: true });
   const label = amt ? `${amt} · ${pct}` : pct;
+  const phrase =
+    tone === 'spend'
+      ? direction === 'up'
+        ? 'Spesa in aumento'
+        : direction === 'down'
+          ? 'Spesa in calo'
+          : 'Spesa invariata'
+      : direction === 'up'
+        ? 'In rialzo'
+        : direction === 'down'
+          ? 'In ribasso'
+          : 'Invariato';
 
   return (
     <View
       testID={testID}
-      accessibilityLabel={`${direction === 'up' ? 'In rialzo' : direction === 'down' ? 'In ribasso' : 'Invariato'} ${label}`}
+      accessibilityLabel={`${phrase} ${label}`}
       style={[
         {
           flexDirection: 'row',

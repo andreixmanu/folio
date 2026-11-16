@@ -4,10 +4,13 @@ import {
   formatDayLabel,
   groupByDay,
   merchantsForCategory,
+  monthSpendComparison,
   monthToDateCumulative,
   monthlyTrend,
   periodRange,
+  recentTransactions,
   spendingByCategory,
+  topCategoryShares,
   totalIncome,
   totalSpent,
 } from '@/features/budget/analytics';
@@ -159,6 +162,62 @@ describe('budgetProgress', () => {
     const [row] = budgetProgress(budgets, txs, NOV);
     expect(row?.spent).toBe(40);
     expect(row?.state).toBe('ok');
+  });
+});
+
+describe('overview helpers', () => {
+  test('compares this month with the same day last month', () => {
+    const txs = [
+      tx({ id: 'oct', bookingDate: '2026-10-16', amount: -20, categoryId: 'groceries' }),
+      tx({ id: 'nov-early', bookingDate: '2026-11-02', amount: -5, categoryId: 'restaurants' }),
+      tx({ id: 'nov', bookingDate: '2026-11-16', amount: -10, categoryId: 'groceries' }),
+      tx({ id: 'later', bookingDate: '2026-11-20', amount: -40, categoryId: 'groceries' }),
+      tx({ id: 'move', bookingDate: '2026-11-04', amount: -100, categoryId: 'transfers' }),
+    ];
+    expect(monthSpendComparison(txs, NOV)).toEqual({
+      spent: 15,
+      previous: 20,
+      delta: -5,
+      changePct: -25,
+    });
+  });
+
+  test('has no percent when the same day does not exist in the previous month', () => {
+    const txs = [
+      tx({ id: 'feb', bookingDate: '2026-02-28', amount: -4, categoryId: 'groceries' }),
+      tx({ id: 'mar', bookingDate: '2026-03-31', amount: -10, categoryId: 'groceries' }),
+    ];
+    expect(monthSpendComparison(txs, new Date('2026-03-31T12:00:00.000Z'))).toEqual({
+      spent: 10,
+      previous: 0,
+      delta: 10,
+      changePct: null,
+    });
+  });
+
+  test('top categories carry a share of month-to-date spend and ignore transfers', () => {
+    const txs = [
+      tx({ id: 'a', bookingDate: '2026-11-01', amount: -0.1, categoryId: 'groceries' }),
+      tx({ id: 'b', bookingDate: '2026-11-02', amount: -0.2, categoryId: 'groceries' }),
+      tx({ id: 'c', bookingDate: '2026-11-03', amount: -1.3, categoryId: 'restaurants' }),
+      tx({ id: 'd', bookingDate: '2026-11-04', amount: -500, categoryId: 'transfers' }),
+      tx({ id: 'late', bookingDate: '2026-11-20', amount: -9, categoryId: 'shopping' }),
+    ];
+    expect(topCategoryShares(txs, NOV, 1)).toEqual([
+      { categoryId: 'restaurants', total: 1.3, count: 1, share: 1.3 / 1.6 },
+    ]);
+    expect(topCategoryShares(txs, NOV, 0)).toEqual([]);
+  });
+
+  test('recent transactions are newest first and do not reorder the input', () => {
+    const txs = [
+      tx({ id: 'old', bookingDate: '2026-11-01', amount: -1, categoryId: 'other' }),
+      tx({ id: 'new', bookingDate: '2026-11-16', amount: -2, categoryId: 'other' }),
+      tx({ id: 'mid', bookingDate: '2026-11-10', amount: -3, categoryId: 'other' }),
+    ];
+    expect(recentTransactions(txs, 2).map((item) => item.id)).toEqual(['new', 'mid']);
+    expect(txs.map((item) => item.id)).toEqual(['old', 'new', 'mid']);
+    expect(recentTransactions(txs, 0)).toEqual([]);
   });
 });
 

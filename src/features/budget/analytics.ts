@@ -90,6 +90,25 @@ export function totalIncome(txs: readonly Transaction[], range: DateRange): numb
   );
 }
 
+export type CategoryShare = CategorySpend & {
+  /** Fraction of the month-to-date spend, from 0 to 1. */
+  share: number;
+};
+
+/** Largest month-to-date categories, each with its share of all spending. */
+export function topCategoryShares(txs: readonly Transaction[], now: Date, limit = 5): CategoryShare[] {
+  const today = toISODate(now);
+  const range: DateRange = { from: startOfMonth(today), to: today };
+  const total = totalSpent(txs, range);
+  const cap = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 0;
+  return spendingByCategory(txs, range)
+    .slice(0, cap)
+    .map((row) => ({
+      ...row,
+      share: total > 0 ? row.total / total : 0,
+    }));
+}
+
 export type CumulativePoint = {
   day: number;
   /** Running spend this month. Null after the cutoff day. */
@@ -152,6 +171,34 @@ export function monthToDateCumulative(txs: readonly Transaction[], month: Date):
     });
   }
   return { month: currentYm, previousMonth: previousYm, cutoffDay, points };
+}
+
+export type MonthSpendComparison = {
+  /** Positive euros spent this month, through today. */
+  spent: number;
+  /** Positive euros spent on the same day-of-month last month. */
+  previous: number;
+  /** `spent - previous`. Positive means more was spent. */
+  delta: number;
+  /**
+   * Percent change versus the same day last month.
+   * Null when that calendar day does not exist, or when last month was 0 and this month is not.
+   */
+  changePct: number | null;
+};
+
+/** This month's spend against last month, aligned on the day of month. */
+export function monthSpendComparison(txs: readonly Transaction[], now: Date): MonthSpendComparison {
+  const series = monthToDateCumulative(txs, now);
+  const point = series.points[series.cutoffDay - 1];
+  const spent = point?.current ?? 0;
+  const sameDay = point?.previous;
+  if (sameDay == null) {
+    return { spent, previous: 0, delta: spent, changePct: null };
+  }
+  const delta = fromCents(toCents(spent) - toCents(sameDay));
+  const changePct = sameDay > 0 ? (delta / sameDay) * 100 : spent === 0 ? 0 : null;
+  return { spent, previous: sameDay, delta, changePct };
 }
 
 export type MonthTrend = {
@@ -298,4 +345,12 @@ export function groupByDay(txs: readonly Transaction[], now: Date = new Date()):
       net: sumAmounts(transactions.map((tx) => tx.amount.amount)),
       transactions,
     }));
+}
+
+/** Newest transactions first. A non-positive `limit` returns an empty list. */
+export function recentTransactions(txs: readonly Transaction[], limit = 5): Transaction[] {
+  const cap = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 0;
+  return [...txs]
+    .sort((a, b) => b.bookingDate.localeCompare(a.bookingDate) || b.id.localeCompare(a.id))
+    .slice(0, cap);
 }
