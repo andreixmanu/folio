@@ -38,7 +38,6 @@ function RouterProviders({ children }: { children: ReactNode }) {
 }
 
 const placeholders: { screen: () => ReactNode; title: string; testID: string }[] = [
-  { screen: () => <AnalyticsScreen />, title: 'Analisi', testID: 'budget-analytics-screen' },
   { screen: () => <BudgetsScreen />, title: 'Budget', testID: 'budget-budgets-screen' },
 ];
 

@@ -3,7 +3,7 @@
  * Spending is outflows excluding transfers. Income is inflows categorised as income.
  */
 
-import { addDays, addMonths, dayOfMonth, daysInMonth, endOfMonth, startOfMonth, toISODate, yearMonth } from './dates';
+import { addDays, addMonths, dayOfMonth, daysBetween, daysInMonth, endOfMonth, startOfMonth, toISODate, yearMonth } from './dates';
 import { displayMerchant } from './merchant';
 import {
   fromCents,
@@ -353,4 +353,73 @@ export function recentTransactions(txs: readonly Transaction[], limit = 5): Tran
   return [...txs]
     .sort((a, b) => b.bookingDate.localeCompare(a.bookingDate) || b.id.localeCompare(a.id))
     .slice(0, cap);
+}
+
+/** Inclusive window of the same length, ending the day before `range.from`. */
+export function previousRange(range: DateRange): DateRange {
+  const length = daysBetween(range.from, range.to) + 1;
+  const to = addDays(range.from, -1);
+  const from = addDays(to, -(length - 1));
+  return { from, to };
+}
+
+export type PeriodComparison = {
+  /** Positive euros spent in the selected period. */
+  spent: number;
+  /** Positive euros spent in the previous window. */
+  previous: number;
+  /** `spent - previous`. Positive means more was spent. */
+  delta: number;
+  /** Percent change versus the previous window. Null when that window is 0. */
+  changePct: number | null;
+};
+
+/** Spend in `period` against the equal window immediately before it. */
+export function periodComparison(txs: readonly Transaction[], period: BudgetPeriod, now: Date): PeriodComparison {
+  const current = periodRange(period, now);
+  const prior = previousRange(current);
+  const spent = totalSpent(txs, current);
+  const previous = totalSpent(txs, prior);
+  const delta = fromCents(toCents(spent) - toCents(previous));
+  const changePct = previous === 0 ? null : (delta / previous) * 100;
+  return { spent, previous, delta, changePct };
+}
+
+export type CategoryBreakdown = CategorySpend & {
+  /** Percent of spending in the range, from 0 to 100. */
+  share: number;
+};
+
+/** Spending by category, largest first. `share` is 0–100. Transfers are excluded. */
+export function categoryBreakdown(txs: readonly Transaction[], range: DateRange): CategoryBreakdown[] {
+  const rows = spendingByCategory(txs, range);
+  const totalCents = rows.reduce((sum, row) => sum + toCents(row.total), 0);
+  return rows
+    .map((row) => ({
+      categoryId: row.categoryId,
+      total: row.total,
+      count: row.count,
+      share: totalCents > 0 ? (toCents(row.total) / totalCents) * 100 : 0,
+    }))
+    .sort((a, b) => b.total - a.total || a.categoryId.localeCompare(b.categoryId));
+}
+
+/**
+ * Spending movements in one category, newest first.
+ * Transfers are included only when `categoryId` is `transfers`.
+ */
+export function transactionsForCategory(
+  txs: readonly Transaction[],
+  categoryId: CategoryId,
+  range: DateRange,
+): Transaction[] {
+  return txs
+    .filter((tx) => {
+      if (!inRange(tx.bookingDate, range)) return false;
+      const id = tx.categoryId ?? 'other';
+      if (id !== categoryId) return false;
+      if (categoryId === 'transfers') return tx.amount.amount < 0;
+      return isSpent(tx);
+    })
+    .sort((a, b) => b.bookingDate.localeCompare(a.bookingDate) || b.id.localeCompare(a.id));
 }

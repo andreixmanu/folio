@@ -149,8 +149,10 @@ export function CategoryPickerSheet({
                 value={applyToMerchant}
                 onValueChange={setApplyToMerchant}
                 disabled={merchantSwitchDisabled}
-                trackColor={{ false: theme.colors.surfaceMuted, true: theme.colors.accent }}
-                thumbColor={theme.colors.surface}
+                // Off state must read on the dark sheet: a visible grey track and a light thumb.
+                trackColor={{ false: theme.colors.textTertiary, true: theme.colors.accent }}
+                ios_backgroundColor={theme.colors.textTertiary}
+                thumbColor={applyToMerchant ? '#FFFFFF' : theme.colors.textSecondary}
                 accessibilityLabel="Applica sempre a questo esercente"
               />
             </View>
