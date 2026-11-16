@@ -1,7 +1,7 @@
 import { resolveApiBaseUrl } from './api/config';
-import { mockNewsSource } from './mock/news';
 import { MOCK_POSITIONS, MOCK_SOURCES } from './mock/positions';
 import { mockStockPriceSource } from './mock/stock-prices';
+import { workerNewsSource } from './news/worker-source';
 import { createWorkerPriceSource } from './prices/worker-source';
 import type { AssetClass, NewsDataSource, PositionsSource, PriceSource, Source } from './types';
 import { fetchWallets, mapWalletsToPositions, type WalletsResponse } from './wallets';
@@ -12,6 +12,7 @@ import { fetchWallets, mapWalletsToPositions, type WalletsResponse } from './wal
  * - Crypto prices: REAL, Kraken via the Folio Worker. To add a fallback for coins Kraken
  *   doesn't list: `withFallback(createWorkerPriceSource(url), openMarketSource)`.
  * - Stock prices: MOCK until IBKR is connected.
+ * - News: REAL RSS/Atom headlines via the Worker (`GET /news`).
  */
 export const apiBaseUrl = resolveApiBaseUrl();
 
@@ -43,4 +44,4 @@ export const priceSources: Record<AssetClass, PriceSource> = {
   crypto: createWorkerPriceSource(apiBaseUrl),
   stocks: mockStockPriceSource,
 };
-export const newsSource: NewsDataSource = mockNewsSource;
+export const newsSource: NewsDataSource = workerNewsSource;

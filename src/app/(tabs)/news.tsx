@@ -4,6 +4,7 @@ import Animated from 'react-native-reanimated';
 
 import {
   AppText,
+  ErrorState,
   FilterChips,
   IslandCard,
   RowSeparator,
@@ -18,8 +19,9 @@ import { enterFade, useTheme } from '@/theme';
 
 const FILTERS: { value: NewsFilter; label: string }[] = [
   { value: 'all', label: 'Tutte' },
-  { value: 'markets', label: 'Mercati' },
+  { value: 'mercati', label: 'Mercati' },
   { value: 'crypto', label: 'Crypto' },
+  { value: 'italia', label: 'Italia' },
 ];
 
 export default function NewsScreen() {
@@ -28,23 +30,45 @@ export default function NewsScreen() {
   const setFilter = useUiStore((s) => s.setNewsFilter);
   const news = useNews(filter);
 
+  const openArticle = (url: string) => {
+    void WebBrowser.openBrowserAsync(url, {
+      toolbarColor: theme.colors.background,
+      controlsColor: theme.colors.accent,
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+    });
+  };
+
   return (
     <Screen testID="news-screen" refreshing={news.isRefetching} onRefresh={() => void news.refetch()}>
-      <ScreenHeader eyebrow="Mercati e crypto" title="Notizie" />
+      <ScreenHeader eyebrow="Mercati, crypto e Italia" title="Notizie" />
       <FilterChips options={FILTERS} value={filter} onChange={setFilter} testID="news-filter" />
 
-      <IslandCard index={0} padding="lg" style={{ paddingVertical: theme.spacing.xs }}>
-        {news.data ? (
-          news.data.map((article, i) => (
-            <Animated.View key={article.id} entering={enterFade(i)}>
-              {i > 0 ? <RowSeparator inset={0} /> : null}
-              <ArticleRow
-                article={article}
-                onPress={() => void WebBrowser.openBrowserAsync(article.url)}
-              />
-            </Animated.View>
-          ))
+      {news.isError && !news.data ? (
+        <ErrorState
+          title="Notizie non disponibili"
+          message="Impossibile aggiornare i feed. Riprova tra poco."
+          onRetry={() => void news.refetch()}
+          testID="news-error"
+        />
+      ) : news.data ? (
+        news.data.length === 0 ? (
+          <IslandCard index={0}>
+            <AppText variant="body" color="textSecondary" align="center">
+              Nessuna notizia in questo momento.
+            </AppText>
+          </IslandCard>
         ) : (
+          <IslandCard index={0} padding="lg" style={{ paddingVertical: theme.spacing.xs }}>
+            {news.data.map((article, i) => (
+              <Animated.View key={article.id} entering={enterFade(i)}>
+                {i > 0 ? <RowSeparator inset={0} /> : null}
+                <ArticleRow article={article} onPress={() => openArticle(article.url)} />
+              </Animated.View>
+            ))}
+          </IslandCard>
+        )
+      ) : (
+        <IslandCard index={0} padding="lg" style={{ paddingVertical: theme.spacing.xs }}>
           <View style={{ gap: theme.spacing.lg, paddingVertical: theme.spacing.md }}>
             {[0, 1, 2, 3].map((i) => (
               <View key={i} style={{ gap: 6 }}>
@@ -54,11 +78,8 @@ export default function NewsScreen() {
               </View>
             ))}
           </View>
-        )}
-      </IslandCard>
-      <AppText variant="micro" color="textTertiary" align="center">
-        Dati di esempio · Feed RSS in arrivo
-      </AppText>
+        </IslandCard>
+      )}
     </Screen>
   );
 }

@@ -1,37 +1,51 @@
+import { Image } from 'expo-image';
+import { useState } from 'react';
 import { View } from 'react-native';
 
 import { AppText, PressableScale } from '@/components/ui';
-import { formatRelativeTime } from '@/lib/format';
+import { formatRelativeTimeIt } from '@/lib/format';
 import type { NewsArticle } from '@/services/types';
 import { useTheme } from '@/theme';
-
-const CATEGORY_LABEL = { markets: 'Mercati', crypto: 'Crypto' } as const;
 
 /** Dense news row used inside a single grouped island. */
 export function ArticleRow({ article, onPress }: { article: NewsArticle; onPress: () => void }) {
   const theme = useTheme();
-  const tint = article.category === 'crypto' ? theme.colors.assetClass.crypto : theme.colors.accent;
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageUrl = !imageFailed ? article.imageUrl : undefined;
+
   return (
     <PressableScale
+      haptic="selection"
       onPress={onPress}
       accessibilityLabel={article.title}
       testID={`article-${article.id}`}
-      style={{ paddingVertical: theme.spacing.md, gap: 4 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: tint }} />
-        <AppText variant="micro" style={{ color: tint }}>
-          {CATEGORY_LABEL[article.category].toUpperCase()}
-        </AppText>
-        <AppText variant="micro" color="textTertiary" style={{ flex: 1 }} numberOfLines={1}>
-          {article.source} · {formatRelativeTime(article.publishedAt)}
-        </AppText>
+      style={{ paddingVertical: theme.spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.md }}>
+        <View style={{ flex: 1, gap: 4 }}>
+          <AppText variant="caption" color="textTertiary" numberOfLines={1}>
+            {article.source} · {formatRelativeTimeIt(article.publishedAt)}
+          </AppText>
+          <AppText variant="bodyStrong" numberOfLines={2}>
+            {article.title}
+          </AppText>
+          {article.summary ? (
+            <AppText variant="caption" color="textSecondary" numberOfLines={1}>
+              {article.summary}
+            </AppText>
+          ) : null}
+        </View>
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={{ width: 56, height: 56, borderRadius: theme.radii.sm, backgroundColor: theme.colors.surfaceMuted }}
+            contentFit="cover"
+            transition={150}
+            accessibilityIgnoresInvertColors
+            onError={() => setImageFailed(true)}
+            testID={`article-image-${article.id}`}
+          />
+        ) : null}
       </View>
-      <AppText variant="bodyStrong" numberOfLines={2}>
-        {article.title}
-      </AppText>
-      <AppText variant="caption" color="textSecondary" numberOfLines={1}>
-        {article.summary}
-      </AppText>
     </PressableScale>
   );
 }

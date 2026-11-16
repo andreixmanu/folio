@@ -153,11 +153,15 @@ export function useValueHistory(range: TimeRange, live?: { t: number; value: num
   };
 }
 
+const NEWS_STALE_MS = 5 * 60_000;
+
+/** Headlines for one chip. The query key includes the category; focus refetches. */
 export function useNews(category: NewsCategory | 'all') {
   return useQuery({
     queryKey: queryKeys.news(category),
-    queryFn: () => newsSource.getArticles(category === 'all' ? undefined : category),
-    staleTime: 5 * 60_000,
+    queryFn: ({ signal }) => newsSource.getArticles(category === 'all' ? undefined : category, signal),
+    staleTime: NEWS_STALE_MS,
+    refetchOnWindowFocus: true,
     placeholderData: keepPreviousData,
   });
 }

@@ -77,7 +77,7 @@ export type AllocationSlice = {
   asset?: { symbol: string; assetClass: AssetClass };
 };
 
-export type NewsCategory = 'markets' | 'crypto';
+export type NewsCategory = 'mercati' | 'crypto' | 'italia';
 
 export type NewsArticle = {
   id: string;
@@ -85,6 +85,7 @@ export type NewsArticle = {
   summary: string;
   source: string;
   url: string;
+  imageUrl?: string;
   category: NewsCategory;
   publishedAt: string;
 };
@@ -138,5 +139,5 @@ export interface PriceSource {
 }
 
 export interface NewsDataSource {
-  getArticles(category?: NewsCategory): Promise<NewsArticle[]>;
+  getArticles(category?: NewsCategory, signal?: AbortSignal): Promise<NewsArticle[]>;
 }

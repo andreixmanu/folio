@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:metadata="http://search.cnbc.com/rss/2.0/modules/siteContentMetadata" version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<channel>
+  <title>Finance</title>
+  <link>https://www.cnbc.com/finance/</link>
+
+<item>
+      <link>https://www.cnbc.com/2026/11/16/china-retail-sales-october-industrial-output-investment.html</link>
+      <guid isPermaLink="false">108551663</guid>
+      <metadata:type>cnbcnewsstory</metadata:type>
+      <metadata:id>108551663</metadata:id>
+      <metadata:sponsored>false</metadata:sponsored>
+      <title>China’s slowdown deepens in October as industrial output, retail sales, investment miss estimates</title>
+      <description><![CDATA[A deepening reliance on external demand leaves China more exposed to shocks abroad as domestic momentum fades, analysts say.]]></description>
+      <pubDate>Mon, 16 Nov 2026 03:53:59 GMT</pubDate>
+    </item>
+<item>
+      <link>https://www.cnbc.com/2026/11/14/nvidia-ai-trade-data-centers-congress.html</link>
+      <guid isPermaLink="false">108551291</guid>
+      <metadata:type>cnbcnewsstory</metadata:type>
+      <metadata:id>108551291</metadata:id>
+      <metadata:sponsored>false</metadata:sponsored>
+      <title>How Nvidia turmoil and a Democratic Congress could reshape the AI trade, according to ETF experts</title>
+      <description><![CDATA[ETF experts say Nvidia’s leadership turmoil and Democratic control of Congress could shift AI demand to the benefit of other Big Tech stocks, rival chipmakers.]]></description>
+      <pubDate>Sat, 14 Nov 2026 15:50:43 GMT</pubDate>
+    </item>
+<item>
+      <link>https://www.cnbc.com/2026/11/14/foundation-payroll-ceo-loan.html</link>
+      <guid isPermaLink="false">108550096</guid>
+      <metadata:type>cnbcnewsstory</metadata:type>
+      <metadata:id>108550096</metadata:id>
+      <metadata:sponsored>false</metadata:sponsored>
+      <title>Eric Trump-backed robot soldier startup can&apos;t pay staff after founder borrowed $4.6 million from company to buy home</title>
+      <description><![CDATA[Eric Trump-backed robot startup Foundation Future Industries has run low on cash and missed payroll, as CEO Sankaet Pathak faces scrutiny over a $4.6 million company loan.]]></description>
+      <pubDate>Sat, 14 Nov 2026 12:00:01 GMT</pubDate>
+    </item>
+</channel>
+</rss>

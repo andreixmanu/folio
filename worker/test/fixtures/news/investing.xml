@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+<channel>
+  <title>Stock Market News</title>
+  <link>https://www.investing.com</link>
+
+<item>
+      <enclosure url="https://content-media.investing.com/news/moved_LYNXNPEMAC1IQ_L.jpg" length="45133" type="image/jpeg"/>
+      <title>Jensen Huang may return as Nvidia CEO, report says</title>
+      <pubDate>2026-11-16 09:53:03</pubDate>
+      <author>Investing.com</author>
+      <link>https://www.investing.com/news/stock-market-news/jensen-huang-may-return-as-nvidia-chief-executive--report-5028097</link>
+    </item>
+<item>
+      <enclosure url="https://content-media.investing.com/trkd-images/LYNXNPEMAF0QC_L.jpg" length="59537" type="image/jpeg"/>
+      <title>Chip tensions loom over Trump-Xi summit, as US and China push AI safety steps</title>
+      <pubDate>2026-11-16 09:30:32</pubDate>
+      <author>Reuters</author>
+      <link>https://www.investing.com/news/stock-market-news/chip-tensions-loom-over-trumpxi-summit-as-us-and-china-push-ai-safety-steps-5028728</link>
+    </item>
+<item>
+      <enclosure url="https://content-media.investing.com/trkd-images/LYNXNPEMAC0II_L.jpg" length="95911" type="image/jpeg"/>
+      <title>Britain eyes welfare cuts to tackle surge in youth unemployment</title>
+      <pubDate>2026-11-16 09:24:39</pubDate>
+      <author>Reuters</author>
+      <link>https://www.investing.com/news/stock-market-news/britain-eyes-welfare-cuts-to-tackle-surge-in-youth-unemployment-5028755</link>
+    </item>
+</channel>
+</rss>

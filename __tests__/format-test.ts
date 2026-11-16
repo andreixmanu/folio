@@ -1,4 +1,4 @@
-import { formatMoney, formatPercent, formatQuantity, formatRelativeTime } from '@/lib/format';
+import { formatMoney, formatPercent, formatQuantity, formatRelativeTime, formatRelativeTimeIt } from '@/lib/format';
 
 // Intl output uses non-breaking spaces before the currency symbol.
 const normalize = (s: string) => s.replace(/\u00a0|\u202f/g, ' ');
@@ -27,5 +27,17 @@ describe('format', () => {
     expect(formatRelativeTime('2026-01-01T11:48:00Z', now)).toBe('12 min fa');
     expect(formatRelativeTime('2026-01-01T09:00:00Z', now)).toBe('3 h fa');
     expect(formatRelativeTime('2025-12-30T12:00:00Z', now)).toBe('2 g fa');
+  });
+
+  test('formatRelativeTimeIt', () => {
+    const now = new Date('2026-11-16T22:30:00Z');
+    expect(formatRelativeTimeIt(now, now)).toBe('ora');
+    expect(formatRelativeTimeIt('2026-11-16T22:29:30Z', now)).toBe('ora');
+    expect(formatRelativeTimeIt('2026-11-16T22:25:00Z', now)).toBe('5 min fa');
+    expect(formatRelativeTimeIt('2026-11-16T20:30:00Z', now)).toBe('2 h fa');
+    expect(formatRelativeTimeIt('2026-11-15T20:00:00Z', now)).toBe('ieri');
+    expect(formatRelativeTimeIt('2026-11-13T22:30:00Z', now)).toBe('3 g fa');
+    // 27h that crosses two midnights in Rome is not "ieri".
+    expect(formatRelativeTimeIt('2026-11-14T21:00:00Z', new Date('2026-11-16T00:00:00Z'))).toBe('2 g fa');
   });
 });

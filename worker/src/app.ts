@@ -7,6 +7,8 @@ import { handleChat } from './chat';
 import type { Env } from './env';
 import { fetchQuotes, fetchSeries, KrakenError, type Fetcher } from './kraken';
 import { defaultFetchLogo, logoUrl, normalizeLogoSymbol, type BinaryFetcher } from './logos';
+import { isNewsCategory, type NewsFeed } from './news/feeds';
+import { loadNews, NEWS_CACHE_CONTROL } from './news/load';
 import { parseRange, RANGE_SPECS } from './ranges';
 import { parseSymbols } from './symbols';
 import { getWalletsResponse } from './wallets';
@@ -25,10 +27,16 @@ export type AppDeps = {
   /** xAI token refresh and `POST /v1/responses`. Tests inject this so nothing hits the network. */
   fetchUpstream?: XaiFetcher;
   sleep?: (ms: number) => Promise<void>;
-  /** Injected in tests so wallet/Kraken calls never hit the network. */
+  /** Injected in tests so wallet/Kraken/news calls never hit the network. */
   fetch?: FetchImpl;
   chainTimeoutMs?: number;
   requestTimeoutMs?: number;
+  /** Per-feed RSS timeout. Default 5s. */
+  newsTimeoutMs?: number;
+  /** Max bytes read from one feed. Default 2 MB. */
+  newsMaxBytes?: number;
+  /** Override the built-in feed list (tests). */
+  newsFeeds?: readonly NewsFeed[];
 };
 
 async function defaultFetchJson(url: string, fetchImpl: FetchImpl): Promise<unknown> {
@@ -66,7 +74,7 @@ export function createApp(deps: AppDeps = {}) {
   app.get('/', (c) =>
     c.json({
       name: 'folio-api',
-      endpoints: ['/health', '/prices', '/history', '/logo/:symbol', '/chat', '/wallets'],
+      endpoints: ['/health', '/prices', '/history', '/logo/:symbol', '/news', '/chat', '/wallets'],
     }),
   );
   app.get('/health', (c) => c.json({ ok: true, time: new Date(now()).toISOString() }));
@@ -118,6 +126,29 @@ export function createApp(deps: AppDeps = {}) {
       series,
       unsupported,
     });
+  });
+
+  /**
+   * GET /news?category=mercati|crypto|italia
+   * Public. Category is optional; any other query param is ignored.
+   * One cached aggregate is filtered per category. Cache-Control lets the edge
+   * cache in `index.ts` store the full URL, query string included.
+   */
+  app.get('/news', async (c) => {
+    const category = c.req.query('category');
+    if (category !== undefined && !isNewsCategory(category)) {
+      return c.json({ error: 'Invalid category (mercati, crypto, italia)' }, 400);
+    }
+    const aggregate = await loadNews(cache, {
+      fetchImpl,
+      now: now(),
+      timeoutMs: deps.newsTimeoutMs,
+      maxBytes: deps.newsMaxBytes,
+      feeds: deps.newsFeeds,
+    });
+    const items = category ? aggregate.items.filter((item) => item.category === category) : aggregate.items;
+    c.header('Cache-Control', NEWS_CACHE_CONTROL);
+    return c.json({ updatedAt: aggregate.updatedAt, items, feeds: aggregate.feeds });
   });
 
   /** GET /logo/AAPL — stock/ETF logo (PNG), cached for a week. */

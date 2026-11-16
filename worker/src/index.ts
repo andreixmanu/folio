@@ -8,6 +8,7 @@ const app = createApp();
  * also coalesces upstream Kraken calls. Non-GET (including POST /chat) is never cached.
  * `/wallets` and any request carrying `X-Folio-Token` skip the public Cache API so
  * authenticated balances cannot leak to a later unauthenticated GET of the same URL.
+ * `GET /news` is public: the cache key is the full request URL, so `?category=` is part of it.
  */
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

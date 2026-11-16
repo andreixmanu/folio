@@ -53,6 +53,39 @@ export function formatQuantity(value: number): string {
   return value.toLocaleString(NUMBER_LOCALE, { maximumFractionDigits: digits });
 }
 
+const ROME_DAY = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Rome',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function romeDayNumber(date: Date): number {
+  const parts = ROME_DAY.formatToParts(date);
+  const year = Number(parts.find((part) => part.type === 'year')?.value);
+  const month = Number(parts.find((part) => part.type === 'month')?.value);
+  const day = Number(parts.find((part) => part.type === 'day')?.value);
+  return Date.UTC(year, month - 1, day) / 86_400_000;
+}
+
+/**
+ * Short relative time in Italian: `ora`, `5 min fa`, `2 h fa`, `ieri`, `3 g fa`.
+ * Hours stay numeric until 24h; yesterday is the Europe/Rome calendar day.
+ */
+export function formatRelativeTimeIt(date: Date | string | number, now: Date | string | number = new Date()): string {
+  const target = date instanceof Date ? date : new Date(date);
+  const current = now instanceof Date ? now : new Date(now);
+  const diff = current.getTime() - target.getTime();
+  if (!Number.isFinite(diff) || diff < 60_000) return 'ora';
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 60) return `${minutes} min fa`;
+  const hours = Math.floor(diff / 3_600_000);
+  if (hours < 24) return `${hours} h fa`;
+  const days = romeDayNumber(current) - romeDayNumber(target);
+  if (days <= 1) return 'ieri';
+  return `${days} g fa`;
+}
+
 /** Short relative time in Italian: `ora`, `5 min fa`, `3 h fa`, `2 g fa`. */
 export function formatRelativeTime(iso: string, now: Date = new Date()): string {
   const diffMs = now.getTime() - new Date(iso).getTime();

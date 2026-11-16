@@ -7,6 +7,7 @@ Cloudflare Worker (Hono) that proxies Kraken's free public API (no key) and norm
 | `GET /prices?symbols=BTC,ETH,SOL` | Live EUR quotes (Kraken `Ticker`), `changePct` vs today's 00:00 UTC open | 30 s |
 | `GET /history?symbols=BTC,ETH&range=1M` | Close prices (Kraken `OHLC`), `t` in seconds | 1 min – 6 h by range |
 | `GET /logo/:symbol` | Stock/ETF logo PNG, proxied from Financial Modeling Prep's public no-key image endpoint (ETFs mapped to the issuer listing, e.g. VWCE → VWRL.L); 404 if unknown | 7 days (misses 1 day) |
+| `GET /news` | Finance and crypto headlines aggregated from the RSS/Atom feeds below. Optional `?category=` of `mercati`, `crypto` or `italia` (anything else is 400). Public, no token. Body: `{ updatedAt, items, feeds }` where each feed is `{ id, source, category, ok, count, error? }` | 10 min |
 | `POST /chat` | Assistente mercati (xAI). Header `X-Folio-Token`. SSE: `status` (`thinking`, `searching_web`, `searching_x`), `delta`, `sources`, `error`, `done` | – |
 | `GET /wallets` | Read-only Tangem balances (Bitcoin + Ethereum + USDC/USDT). Header `X-Folio-Token`. Never returns addresses | 60 s private (in-isolate; not the public Cache API) |
 | `GET /health` | Liveness | – |
@@ -14,6 +15,25 @@ Cloudflare Worker (Hono) that proxies Kraken's free public API (no key) and norm
 Ranges → OHLC interval (≤ 720 candles): 1D 15m · 1W 1h · 1M 4h · 1Y 1d · ALL 1w.
 Unknown symbols are returned in `unsupported` so the app can try a fallback source later.
 Symbol map and Kraken naming quirks (XBT/XXBT, XETHZEUR, XDG…) live in `src/symbols.ts`.
+
+## News feeds
+
+`GET /news` fetches every feed in parallel (`src/news/feeds.ts`), parses RSS 2.0 and Atom, and caches the aggregate for 10 minutes. A failed feed does not fail the response: its `feeds[]` entry has `ok: false` and a short `error` (`http_403`, `timeout`, `parse`, `fetch_error`). Only `category` is read from the query string.
+
+| Id | Source | Category | URL |
+| --- | --- | --- | --- |
+| `sole24-mercati` | Il Sole 24 Ore | italia | https://www.ilsole24ore.com/rss/finanza--quotate-italia.xml |
+| `sole24-finanza` | Il Sole 24 Ore | italia | https://www.ilsole24ore.com/rss/finanza.xml |
+| `ansa-economia` | ANSA | italia | https://www.ansa.it/sito/notizie/economia/economia_rss.xml |
+| `repubblica-economia` | la Repubblica | italia | https://www.repubblica.it/rss/economia/rss2.0.xml |
+| `cnbc-markets` | CNBC | mercati | https://www.cnbc.com/id/10000664/device/rss/rss.html |
+| `marketwatch` | MarketWatch | mercati | https://feeds.content.dowjones.io/public/rss/mw_topstories |
+| `ft-markets` | Financial Times | mercati | https://www.ft.com/markets?format=rss |
+| `investing` | Investing.com | mercati | https://www.investing.com/rss/news_25.rss |
+| `coindesk` | CoinDesk | crypto | https://www.coindesk.com/arc/outboundfeeds/rss/ |
+| `cointelegraph` | Cointelegraph | crypto | https://cointelegraph.com/rss |
+| `theblock` | The Block | crypto | https://www.theblock.co/rss.xml |
+| `decrypt` | Decrypt | crypto | https://decrypt.co/feed |
 
 ```bash
 npm install
