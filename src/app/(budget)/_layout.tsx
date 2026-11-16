@@ -63,6 +63,8 @@ export default function BudgetLayout() {
         name="budget-settings"
         options={{
           title: 'Impostazioni',
+          tabBarLabel: 'Opzioni',
+          tabBarAccessibilityLabel: 'Impostazioni',
           tabBarButtonTestID: 'tab-budget-settings',
           tabBarIcon: ({ focused, color, size }) => (
             <TabIcon icon={Settings} size={size} color={color} focused={focused} />

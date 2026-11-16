@@ -28,10 +28,8 @@ export function AccountStrip({ accounts, masked = false }: { accounts: readonly 
       contentContainerStyle={{ gap: theme.spacing.sm, paddingHorizontal: theme.spacing.lg }}
       testID="budget-accounts">
       {accounts.map((account) => {
-        const bankLine =
-          account.institutionName === account.name && account.iban
-            ? `${account.institutionName} · ${account.iban}`
-            : account.institutionName;
+        const digits = account.iban?.replace(/[\s•]/g, '') ?? '';
+        const bankLine = digits ? `•• ${digits.slice(-4)}` : account.institutionName;
         return (
           <View
             key={account.id}

@@ -46,7 +46,7 @@ export function CategorySpendRow({
   const category = CATEGORY_BY_ID[categoryId];
   const color = categoryColor(categoryId, theme.scheme);
   const amountText = masked ? MASK : formatMoney(amount);
-  const shareText = formatPercent(share * 100, { signed: false });
+  const shareText = formatPercent(share * 100, { signed: false, decimals: 0 });
   return (
     <PressableScale
       onPress={onPress}

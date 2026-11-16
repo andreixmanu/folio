@@ -63,7 +63,7 @@ describe('budget hooks', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const netflix = result.current.data?.filter((tx) => tx.merchantKey === 'netflix') ?? [];
-    expect(netflix.length).toBeGreaterThanOrEqual(4);
+    expect(netflix.length).toBe(3);
     expect(netflix.every((tx) => tx.categoryId === 'subscriptions' && tx.categorySource === 'builtin')).toBe(true);
     const target = netflix[0];
     expect(target).toBeDefined();
@@ -118,7 +118,7 @@ describe('budget hooks', () => {
     await waitFor(() => expect(recurring.result.current.data).toBeDefined());
     expect(recurring.result.current.data?.find((series) => series.merchantKey === 'netflix')).toMatchObject({
       cadence: 'monthly',
-      nextDate: '2026-12-02',
+      nextDate: '2026-11-19',
       isSubscription: true,
       averageAmount: 13.99,
     });
@@ -127,7 +127,7 @@ describe('budget hooks', () => {
     const progress = await renderHook(() => useBudgetProgress(NOW), { wrapper: Wrapper });
     await waitFor(() => expect(progress.result.current.data).toBeDefined());
     const byId = Object.fromEntries((progress.result.current.data ?? []).map((row) => [row.categoryId, row]));
-    expect(byId.subscriptions?.state).toBe('warning');
+    expect(byId.subscriptions?.state).toBe('ok');
     expect(byId.shopping?.state).toBe('over');
   });
 });

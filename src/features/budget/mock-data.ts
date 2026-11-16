@@ -143,6 +143,16 @@ export function createMockBudgetData(now: Date): MockBudgetData {
   const drafts: Draft[] = [];
   let seq = 0;
   let saturdayIndex = 0;
+  const todayDay = Number(today.slice(8, 10));
+  // Netflix, Spotify and Iliad track today's day-of-month so the next due
+  // date stays inside 14 days. Wrapped into 1..28 (every month has those
+  // days). add() skips a day past slice.lastDay, so a still-future day of
+  // the current month is not booked.
+  const billDay = (offset: number): number => {
+    let day = todayDay + offset;
+    while (day > 28) day -= 28;
+    return day;
+  };
 
   const jitter = (cents: number): number => cents + Math.round((rng() - 0.5) * 200);
 
@@ -156,14 +166,14 @@ export function createMockBudgetData(now: Date): MockBudgetData {
     const card = 'PMNT-CCRD-POSD';
     const sdd = 'PMNT-RDDT-ESDD';
 
-    add(slice, 1, {
+    add(slice, billDay(3), {
       accountId: REVOLUT,
       amountCents: -1399,
       creditorName: 'NETFLIX.COM',
       merchantCategoryCode: '4899',
       bankTransactionCode: card,
     });
-    add(slice, 1, {
+    add(slice, billDay(6), {
       accountId: REVOLUT,
       amountCents: -1099,
       creditorName: 'PAYPAL *SPOTIFY',
@@ -191,7 +201,7 @@ export function createMockBudgetData(now: Date): MockBudgetData {
       merchantCategoryCode: '5818',
       bankTransactionCode: card,
     });
-    add(slice, 1, {
+    add(slice, billDay(10), {
       accountId: AURORA,
       amountCents: -999,
       creditorName: 'ILIAD ITALIA',

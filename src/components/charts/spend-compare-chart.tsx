@@ -38,11 +38,29 @@ function axisLabel(day: number, last: number): string | undefined {
   return undefined;
 }
 
-function withOrigin(values: readonly number[], labelAt?: (day: number) => string | undefined): lineDataItem[] {
-  const items: lineDataItem[] = [{ value: 0 }];
+/** Wider than `spacing`, which is all gifted-charts gives each x-axis label. */
+const DAY_LABEL_WIDTH = 28;
+
+type AxisPoint = lineDataItem & { labelWidth?: number };
+
+function withOrigin(
+  values: readonly number[],
+  labelAt?: (day: number) => string | undefined,
+  labelTextStyle?: lineDataItem['labelTextStyle'],
+): AxisPoint[] {
+  const items: AxisPoint[] = [{ value: 0 }];
   values.forEach((value, index) => {
     const label = labelAt?.(index + 1);
-    items.push(label ? { value, label } : { value });
+    items.push(
+      label
+        ? {
+            value,
+            label,
+            labelTextStyle,
+            labelWidth: DAY_LABEL_WIDTH,
+          }
+        : { value },
+    );
   });
   return items;
 }
@@ -80,7 +98,17 @@ export function SpendCompareChart({
   const model = useMemo(() => {
     const currentValues = definedPrefix(points.map((point) => point.current));
     const previousValues = definedPrefix(points.map((point) => point.previous));
-    const current = withOrigin(currentValues, (day) => axisLabel(day, currentValues.length));
+    const dayLabelStyle = {
+      color: theme.colors.textTertiary,
+      fontSize: 11,
+      fontFamily: theme.fonts.medium,
+      width: DAY_LABEL_WIDTH,
+      // react-native-web caps one-line Text at maxWidth 100% of the spacing-wide slot.
+      maxWidth: DAY_LABEL_WIDTH,
+      textAlign: 'center' as const,
+      alignSelf: 'center' as const,
+    };
+    const current = withOrigin(currentValues, (day) => axisLabel(day, currentValues.length), dayLabelStyle);
     const previous = withOrigin(previousValues);
     const peak = Math.max(0, ...currentValues, ...previousValues);
     return {
@@ -90,7 +118,7 @@ export function SpendCompareChart({
       previousValues,
       maxValue: peak > 0 ? peak * 1.12 : 1,
     };
-  }, [points]);
+  }, [points, theme.colors.textTertiary, theme.fonts.medium]);
 
   const count = Math.max(model.current.length, model.previous.length);
   const spacing = count > 1 && width > 0 ? width / (count - 1) : 0;

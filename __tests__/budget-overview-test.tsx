@@ -87,7 +87,9 @@ describe('budget overview', () => {
     expect(screen.getByText('Saldo totale')).toBeTruthy();
     expect(screen.getByTestId('budget-total').props.accessibilityLabel).toBe(formatMoney(total));
     expect(within(screen.getByTestId('budget-account-acc-revolut')).getByText('Revolut')).toBeTruthy();
-    expect(within(screen.getByTestId('budget-account-acc-aurora')).getByText('Banca Aurora')).toBeTruthy();
+    expect(within(screen.getByTestId('budget-account-acc-revolut')).getByText('•• 7390')).toBeTruthy();
+    expect(within(screen.getByTestId('budget-account-acc-aurora')).getByText('Conto corrente')).toBeTruthy();
+    expect(within(screen.getByTestId('budget-account-acc-aurora')).getByText('•• 4821')).toBeTruthy();
 
     expect(screen.getByText('Speso questo mese')).toBeTruthy();
     expect(screen.getByTestId('budget-spent').props.accessibilityLabel).toBe(formatMoney(comparison.spent));
@@ -114,10 +116,9 @@ describe('budget overview', () => {
     });
 
     const upcoming = upcomingPayments(detectRecurring(txs, now), now, 14);
-    if (upcoming.length === 0) {
-      expect(screen.getByText('Nessun pagamento nei prossimi 14 giorni')).toBeTruthy();
-    } else {
-      expect(screen.getByTestId(`budget-upcoming-${upcoming[0]?.merchantKey}`)).toBeTruthy();
+    expect(upcoming.length).toBeGreaterThanOrEqual(2);
+    for (const payment of upcoming) {
+      expect(screen.getByTestId(`budget-upcoming-${payment.merchantKey}`)).toBeTruthy();
     }
 
     const recent = recentTransactions(txs, 5);

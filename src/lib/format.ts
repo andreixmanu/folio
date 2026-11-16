@@ -37,10 +37,13 @@ export function formatMoney(
 }
 
 /** Formats a percentage expressed as a number (2.5 => `+2,50%`). */
-export function formatPercent(value: number, { signed = true }: { signed?: boolean } = {}): string {
+export function formatPercent(
+  value: number,
+  { signed = true, decimals = 2 }: { signed?: boolean; decimals?: number } = {},
+): string {
   const abs = Math.abs(value).toLocaleString(NUMBER_LOCALE, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   });
   if (value < 0) return `−${abs}%`;
   if (signed && value > 0) return `+${abs}%`;

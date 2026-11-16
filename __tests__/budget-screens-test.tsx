@@ -83,6 +83,8 @@ describe('budget tabs', () => {
     expect(screen.getByTestId('tab-analytics')).toBeTruthy();
     expect(screen.getByTestId('tab-budgets')).toBeTruthy();
     expect(screen.getByTestId('tab-budget-settings')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Impostazioni' })).toBeTruthy();
+    expect(screen.getByText('Opzioni')).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Panoramica' })).toBeTruthy();
     await waitFor(
       () => {

@@ -15,6 +15,8 @@ describe('format', () => {
     expect(formatPercent(2.345)).toBe('+2,35%');
     expect(formatPercent(-0.87)).toBe('−0,87%');
     expect(formatPercent(0)).toBe('0,00%');
+    expect(formatPercent(51.4, { signed: false, decimals: 0 })).toBe('51%');
+    expect(formatPercent(2.345, { decimals: 2 })).toBe('+2,35%');
   });
 
   test('formatQuantity adapts precision', () => {

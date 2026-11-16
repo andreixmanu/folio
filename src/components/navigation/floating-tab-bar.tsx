@@ -16,6 +16,7 @@ const INNER_PAD = 6;
 
 function TabItem({
   label,
+  accessibilityLabel,
   focused,
   icon,
   onPress,
@@ -23,6 +24,7 @@ function TabItem({
   testID,
 }: {
   label: string;
+  accessibilityLabel: string;
   focused: boolean;
   icon: React.ReactNode;
   onPress: () => void;
@@ -36,7 +38,7 @@ function TabItem({
     <Pressable
       accessibilityRole="tab"
       accessibilityState={{ selected: focused }}
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel}
       testID={testID}
       onPress={onPress}
       onLongPress={onLongPress}
@@ -155,13 +157,16 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
             if (!descriptor) return null;
             const { options } = descriptor;
             const focused = index === state.index;
-            const label = options.title ?? route.name;
+            const title = options.title ?? route.name;
+            const label = typeof options.tabBarLabel === 'string' ? options.tabBarLabel : title;
+            const accessibilityLabel = options.tabBarAccessibilityLabel ?? title;
             const color = focused ? theme.colors.text : theme.colors.textSecondary;
 
             return (
               <TabItem
                 key={route.key}
                 label={label}
+                accessibilityLabel={accessibilityLabel}
                 focused={focused}
                 testID={options.tabBarButtonTestID}
                 icon={options.tabBarIcon?.({ focused, color, size: 22 })}

@@ -4,7 +4,7 @@ import { createMockBudgetSource } from '@/features/budget/data-source';
 import { addDays, addMonths, startOfMonth, toISODate } from '@/features/budget/dates';
 import { createMockBudgetData, MOCK_ACCOUNT_IDS } from '@/features/budget/mock-data';
 import { CATEGORIES, CATEGORY_IDS, type CategoryId } from '@/features/budget/model';
-import { detectRecurring } from '@/features/budget/recurring';
+import { detectRecurring, upcomingPayments } from '@/features/budget/recurring';
 
 const NOV = new Date('2026-11-16T12:00:00.000Z');
 const MARCH = new Date('2026-03-05T12:00:00.000Z');
@@ -105,7 +105,7 @@ describe('createMockBudgetData', () => {
   test.each([
     ['2026-11-16', NOV],
     ['2026-03-05', MARCH],
-  ])('%s current month warns on subscriptions and is over on shopping', (_label, now) => {
+  ])('%s current month is under the subscription cap and over on shopping', (_label, now) => {
     const { data, txs, today } = load(now);
     const progress = budgetProgress(data.budgets, txs, now);
     const byId = Object.fromEntries(progress.map((row) => [row.categoryId, row])) as Record<
@@ -113,10 +113,10 @@ describe('createMockBudgetData', () => {
       (typeof progress)[number]
     >;
 
-    expect(byId.subscriptions).toMatchObject({ spent: 44.95, limit: 50, state: 'warning' });
+    expect(byId.subscriptions).toMatchObject({ spent: 19.97, limit: 50, state: 'ok' });
     expect(byId.shopping).toMatchObject({ spent: 219.89, limit: 200, state: 'over' });
-    expect(byId.home).toMatchObject({ spent: 759.99, limit: 950, state: 'ok' });
-    expect(progress.some((row) => row.state === 'warning')).toBe(true);
+    expect(byId.home).toMatchObject({ spent: 750, limit: 950, state: 'ok' });
+    expect(progress.some((row) => row.state === 'warning')).toBe(false);
     expect(progress.some((row) => row.state === 'over')).toBe(true);
 
     const recurring = detectRecurring(txs, now);
@@ -130,7 +130,7 @@ describe('createMockBudgetData', () => {
       cadence: 'monthly',
       isSubscription: true,
       averageAmount: 13.99,
-      occurrences: 4,
+      occurrences: 3,
     });
     expect(recurring.find((series) => series.merchantKey === 'iliad')).toMatchObject({
       categoryId: 'home',
@@ -142,15 +142,15 @@ describe('createMockBudgetData', () => {
     expect(totalSpent(txs, month)).toBeGreaterThan(0);
     expect(today).toBe(_label);
     if (today === '2026-11-16') {
-      expect(totalSpent(txs, month)).toBe(1488.74);
+      expect(totalSpent(txs, month)).toBe(1453.77);
       expect(totalIncome(txs, month)).toBe(40);
       expect(progress.map((row) => [row.categoryId, row.spent, row.state])).toEqual([
         ['groceries', 159.34, 'ok'],
         ['restaurants', 81.87, 'ok'],
         ['transport', 99.9, 'ok'],
         ['shopping', 219.89, 'over'],
-        ['home', 759.99, 'ok'],
-        ['subscriptions', 44.95, 'warning'],
+        ['home', 750, 'ok'],
+        ['subscriptions', 19.97, 'ok'],
         ['health', 14.3, 'ok'],
         ['leisure', 39, 'ok'],
         ['travel', 0, 'ok'],
@@ -202,6 +202,25 @@ describe('createMockBudgetData', () => {
     expect(topUp).toMatchObject({ categoryId: 'transfers', categorySource: 'builtin' });
 
     expect(totalIncome(txs, { from: '2026-11-01', to: '2026-11-16' })).toBe(40);
+  });
+
+  test('netflix, spotify and iliad fall inside 14 days on every calendar day', () => {
+    const keys = ['netflix', 'spotify', 'iliad'] as const;
+    let cursor = new Date('2026-01-01T12:00:00.000Z');
+    const end = new Date('2028-01-01T12:00:00.000Z');
+    while (cursor < end) {
+      const { txs, today } = load(cursor);
+      expect(txs.every((tx) => tx.bookingDate <= today)).toBe(true);
+      const recurring = detectRecurring(txs, cursor);
+      const soon = upcomingPayments(recurring, cursor, 14).filter((item) =>
+        keys.includes(item.merchantKey as (typeof keys)[number]),
+      );
+      expect(soon.length).toBeGreaterThanOrEqual(2);
+      for (const key of keys) {
+        expect(recurring.find((series) => series.merchantKey === key)?.cadence).toBe('monthly');
+      }
+      cursor = new Date(cursor.getTime() + 86_400_000);
+    }
   });
 });
 
