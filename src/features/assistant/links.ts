@@ -1,8 +1,5 @@
-import * as WebBrowser from 'expo-web-browser';
-import { Linking } from 'react-native';
+import { openInAppBrowser, type InAppBrowserColors } from '@/lib/open-in-app-browser';
 
-export function openExternalUrl(url: string): void {
-  void WebBrowser.openBrowserAsync(url).catch(() => {
-    void Linking.openURL(url);
-  });
+export function openExternalUrl(url: string, colors?: InAppBrowserColors): void {
+  void openInAppBrowser(url, colors);
 }

@@ -1,4 +1,3 @@
-import * as WebBrowser from 'expo-web-browser';
 import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -13,6 +12,7 @@ import {
   Skeleton,
 } from '@/components/ui';
 import { ArticleRow } from '@/features/news/article-card';
+import { openInAppBrowser } from '@/lib/open-in-app-browser';
 import { useNews } from '@/services/hooks';
 import { useUiStore, type NewsFilter } from '@/store/ui-store';
 import { enterFade, useTheme } from '@/theme';
@@ -31,10 +31,10 @@ export default function NewsScreen() {
   const news = useNews(filter);
 
   const openArticle = (url: string) => {
-    void WebBrowser.openBrowserAsync(url, {
-      toolbarColor: theme.colors.background,
-      controlsColor: theme.colors.accent,
-      presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+    void openInAppBrowser(url, {
+      background: theme.colors.background,
+      surface: theme.colors.surface,
+      accent: theme.colors.accent,
     });
   };
 

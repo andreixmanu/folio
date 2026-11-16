@@ -1,7 +1,9 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 
 import NewsScreen from '@/app/(tabs)/news';
+import { resetInAppBrowserGuard } from '@/lib/open-in-app-browser';
 import { useUiStore } from '@/store/ui-store';
 
 import { renderWithProviders } from '../test/test-utils';
@@ -104,6 +106,7 @@ describe('News screen', () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     process.env.EXPO_PUBLIC_API_URL = 'https://folio.test';
     useUiStore.setState({ newsFilter: 'all' });
+    resetInAppBrowserGuard();
     (WebBrowser.openBrowserAsync as jest.Mock).mockClear();
   });
 
@@ -155,13 +158,23 @@ describe('News screen', () => {
   });
 
   test('opens the article in the in-app browser', async () => {
-    await renderWithProviders(<NewsScreen />);
-    await fireEvent.press(await screen.findByTestId('article-cnbc-1'));
-    expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://news.example/cnbc', {
-      toolbarColor: '#08080B',
-      controlsColor: '#7C6CFF',
-      presentationStyle: 'fullScreen',
-    });
+    const originalOS = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { configurable: true, writable: true, value: 'android' });
+    try {
+      await renderWithProviders(<NewsScreen />);
+      await fireEvent.press(await screen.findByTestId('article-cnbc-1'));
+      expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://news.example/cnbc', {
+        createTask: false,
+        showTitle: true,
+        enableBarCollapsing: true,
+        toolbarColor: '#08080B',
+        secondaryToolbarColor: '#141419',
+        controlsColor: '#7C6CFF',
+        enableDefaultShareMenuItem: true,
+      });
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, writable: true, value: originalOS });
+    }
   });
 
   test('shows an error state and retries', async () => {

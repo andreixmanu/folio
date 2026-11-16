@@ -138,7 +138,13 @@ function InlineRuns({ inlines }: { inlines: MdInline[] }) {
               key={key}
               color="accent"
               accessibilityRole="link"
-              onPress={() => openExternalUrl(inline.url)}>
+              onPress={() =>
+                openExternalUrl(inline.url, {
+                  background: theme.colors.background,
+                  surface: theme.colors.surface,
+                  accent: theme.colors.accent,
+                })
+              }>
               {inline.text}
             </AppText>
           );
