@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import type { LucideIcon } from './icons';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { resolveApiBaseUrl } from '@/services/api/config';
 import type { AssetClass } from '@/services/types';
@@ -70,7 +70,9 @@ export function AssetAvatar({ symbol, size = 36, assetClass }: AssetAvatarProps)
           transition={remote ? 150 : 0}
           recyclingKey={key}
           onError={() => setFailed(true)}
-          accessible={false}
+          // The wrapper View owns the label. On web, `accessible={false}` is
+          // forwarded to the DOM as the string "false" and React warns.
+          {...(Platform.OS === 'web' ? {} : { accessible: false as const })}
         />
         {/* Hairline ring keeps light discs from melting into light surfaces. */}
         <View

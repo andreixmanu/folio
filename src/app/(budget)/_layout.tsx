@@ -3,10 +3,12 @@ import { ChartColumn, LayoutDashboard, PiggyBank, ReceiptText, Settings } from '
 
 import { FloatingTabBar } from '@/components/navigation/floating-tab-bar';
 import { TabIcon } from '@/components/navigation/tab-icon';
+import { useSyncMode } from '@/store/use-sync-mode';
 import { useTheme } from '@/theme';
 
 export default function BudgetLayout() {
   const theme = useTheme();
+  useSyncMode('budget');
   return (
     <Tabs
       tabBar={(props) => <FloatingTabBar {...props} />}

@@ -3,10 +3,12 @@ import { ChartPie, Newspaper, Settings, Sparkles } from '@/components/ui/icons';
 
 import { FloatingTabBar } from '@/components/navigation/floating-tab-bar';
 import { TabIcon } from '@/components/navigation/tab-icon';
+import { useSyncMode } from '@/store/use-sync-mode';
 import { useTheme } from '@/theme';
 
 export default function InvestLayout() {
   const theme = useTheme();
+  useSyncMode('invest');
   return (
     <Tabs
       tabBar={(props) => <FloatingTabBar {...props} />}
