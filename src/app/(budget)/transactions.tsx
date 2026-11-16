@@ -18,7 +18,7 @@ import { CategoryPickerSheet } from '@/features/budget/components/category-picke
 import { MoneyText, TransactionRow } from '@/features/budget/components';
 import { toISODate } from '@/features/budget/dates';
 import { useAccounts, useCategorizedTransactions } from '@/features/budget/hooks';
-import { type CategoryId, type Transaction } from '@/features/budget/model';
+import { type Transaction } from '@/features/budget/model';
 import {
   EMPTY_FILTERS,
   filterTransactions,

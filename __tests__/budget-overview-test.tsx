@@ -127,6 +127,8 @@ describe('budget overview', () => {
     expect(screen.getByText('Movimenti recenti')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('budget-see-all'));
     expect(router.navigate).toHaveBeenCalledWith('/transactions');
+    await fireEvent.press(screen.getByTestId(`budget-tx-${recent[0]?.id ?? ''}`));
+    expect(router.push).toHaveBeenCalledWith(`/transaction/${recent[0]?.id ?? ''}`);
   });
 
   test('shows an error and retries the accounts', async () => {

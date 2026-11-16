@@ -255,7 +255,13 @@ export default function OverviewScreen() {
                   recent.map((tx, index) => (
                     <View key={tx.id}>
                       {index > 0 ? <RowSeparator /> : null}
-                      <TransactionRow tx={tx} today={today} masked={masked} testID={`budget-tx-${tx.id}`} />
+                      <TransactionRow
+                        tx={tx}
+                        today={today}
+                        masked={masked}
+                        onPress={() => router.push(`/transaction/${tx.id}`)}
+                        testID={`budget-tx-${tx.id}`}
+                      />
                     </View>
                   ))
                 )}

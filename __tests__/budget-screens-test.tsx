@@ -9,6 +9,7 @@ import BudgetLayout from '@/app/(budget)/_layout';
 import BudgetSettingsRoute from '@/app/(budget)/budget-settings';
 import BudgetsScreen from '@/app/(budget)/budgets';
 import OverviewScreen from '@/app/(budget)/overview';
+import TransactionDetailScreen from '@/app/transaction/[id]';
 import TransactionsScreen from '@/app/(budget)/transactions';
 import { ThemeProvider } from '@/theme';
 
@@ -70,6 +71,7 @@ describe('budget tabs', () => {
         '(budget)/_layout': BudgetLayout,
         '(budget)/overview': OverviewScreen,
         '(budget)/transactions': TransactionsScreen,
+        'transaction/[id]': TransactionDetailScreen,
         '(budget)/analytics': AnalyticsScreen,
         '(budget)/budgets': BudgetsScreen,
         '(budget)/budget-settings': BudgetSettingsRoute,

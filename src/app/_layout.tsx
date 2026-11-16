@@ -52,8 +52,10 @@ function AppShell() {
           // Cross-fade between Investimenti and Budget. No slide, no bounce.
           animation: 'fade',
           animationDuration: 220,
-        }}
-      />
+        }}>
+        {/* Movement detail: a card pushed above the Budget tabs, with the native back gesture. */}
+        <Stack.Screen name="transaction/[id]" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
+      </Stack>
     </NavigationThemeProvider>
   );
 }
