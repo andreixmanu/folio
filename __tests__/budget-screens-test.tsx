@@ -37,7 +37,6 @@ function RouterProviders({ children }: { children: ReactNode }) {
 }
 
 const placeholders: { screen: () => ReactNode; title: string; testID: string }[] = [
-  { screen: () => <TransactionsScreen />, title: 'Movimenti', testID: 'budget-transactions-screen' },
   { screen: () => <AnalyticsScreen />, title: 'Analisi', testID: 'budget-analytics-screen' },
   { screen: () => <BudgetsScreen />, title: 'Budget', testID: 'budget-budgets-screen' },
 ];
@@ -78,6 +77,7 @@ describe('budget tabs', () => {
       { initialUrl: '/overview', wrapper: RouterProviders },
     );
 
+    expect(screen.getAllByTestId(/^tab-/)).toHaveLength(5);
     expect(screen.getByTestId('tab-overview')).toBeTruthy();
     expect(screen.getByTestId('tab-transactions')).toBeTruthy();
     expect(screen.getByTestId('tab-analytics')).toBeTruthy();
