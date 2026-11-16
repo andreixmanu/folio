@@ -42,12 +42,14 @@ const placeholders: { screen: () => ReactNode; title: string; testID: string }[]
 ];
 
 describe('budget placeholders', () => {
-  test.each(placeholders)('$title renders the coming-soon line', async ({ screen: Screen, title, testID }) => {
-    await renderWithProviders(<Screen />);
+  test.each(placeholders)('$title renders the budget screen', async ({ screen: Screen, title, testID }) => {
+    const view = await renderWithProviders(<Screen />);
     expect(screen.getByTestId(testID)).toBeTruthy();
     expect(screen.getByRole('header', { name: title })).toBeTruthy();
-    expect(screen.getByText('In arrivo')).toBeTruthy();
+    expect(screen.queryByText('In arrivo')).toBeNull();
     expect(screen.getByTestId('mode-switch')).toBeTruthy();
+    await screen.findByTestId('budget-summary');
+    await view.unmount();
   });
 
   test('budget settings renders the shared settings screen', async () => {

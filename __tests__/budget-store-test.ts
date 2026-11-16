@@ -92,6 +92,21 @@ describe('budget store', () => {
     });
   });
 
+  test('removeBudget filters the category out of the persisted list', async () => {
+    useBudgetStore.getState().removeBudget('groceries');
+    const ids = useBudgetStore.getState().budgets.map((budget) => budget.categoryId);
+    expect(ids).not.toContain('groceries');
+    expect(ids).toContain('transport');
+
+    await waitFor(async () => {
+      const raw = await AsyncStorage.getItem(KEY);
+      const parsed = JSON.parse(raw ?? '{}') as { state?: { budgets?: { categoryId: string }[] } };
+      const stored = parsed.state?.budgets?.map((budget) => budget.categoryId) ?? [];
+      expect(stored).not.toContain('groceries');
+      expect(stored).toContain('transport');
+    });
+  });
+
   test('rehydrates rules, overrides, and budgets, and drops invalid rows', async () => {
     await AsyncStorage.setItem(
       KEY,

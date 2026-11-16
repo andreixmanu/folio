@@ -31,6 +31,7 @@ type BudgetState = {
   ) => void;
   removeRule: (ruleId: string) => void;
   setBudgetLimit: (categoryId: CategoryId, monthlyLimit: number) => void;
+  removeBudget: (categoryId: CategoryId) => void;
 };
 
 type Stored = {
@@ -173,6 +174,11 @@ export const useBudgetStore = create<BudgetState>()(
             : [...state.budgets, { categoryId, monthlyLimit: limit, currency: 'EUR' }];
           return { budgets };
         });
+      },
+      removeBudget(categoryId) {
+        set((state) => ({
+          budgets: state.budgets.filter((budget) => budget.categoryId !== categoryId),
+        }));
       },
     }),
     {
