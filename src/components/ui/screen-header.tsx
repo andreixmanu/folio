@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react-native';
+import type { LucideIcon } from './icons';
 import type { ReactNode } from 'react';
 import { Platform, View, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';

@@ -1,4 +1,4 @@
-import { CloudOff } from 'lucide-react-native';
+import { CloudOff } from './icons';
 import { View } from 'react-native';
 
 import { useTheme } from '@/theme';

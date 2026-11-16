@@ -1,4 +1,4 @@
-import { Eye, EyeOff } from 'lucide-react-native';
+import { Eye, EyeOff } from '@/components/ui/icons';
 import { View } from 'react-native';
 
 import {

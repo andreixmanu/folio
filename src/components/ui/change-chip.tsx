@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react-native';
+import { ArrowDownRight, ArrowUpRight, Minus } from './icons';
 import { View } from 'react-native';
 
 import { formatMoney, formatPercent, MASK } from '@/lib/format';

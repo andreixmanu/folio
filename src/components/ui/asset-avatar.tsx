@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import type { LucideIcon } from 'lucide-react-native';
+import type { LucideIcon } from './icons';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 

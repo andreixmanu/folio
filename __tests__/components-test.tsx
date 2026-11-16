@@ -1,5 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react-native';
-import { ChartPie, Eye } from 'lucide-react-native';
+import { ChartPie, Eye } from '@/components/ui/icons';
 
 import { TabIcon } from '@/components/navigation/tab-icon';
 import { ChangeChip } from '@/components/ui/change-chip';

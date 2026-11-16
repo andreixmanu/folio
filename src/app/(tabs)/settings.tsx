@@ -10,7 +10,7 @@ import {
   Sparkles,
   Wallet,
   type LucideIcon,
-} from 'lucide-react-native';
+} from '@/components/ui/icons';
 import { Fragment } from 'react';
 import { Switch, View } from 'react-native';
 
@@ -40,10 +40,10 @@ type FutureSource = {
 
 const FUTURE_SOURCES: FutureSource[] = [
   { key: 'ibkr', title: 'Interactive Brokers', subtitle: 'Flex Query · sola lettura', icon: Landmark, color: '#D81F26' },
-  { key: 'wallets', title: 'Wallet crypto', subtitle: 'Indirizzi on-chain (BTC, ETH, SOL)', icon: Wallet, color: '#B98CFF' },
+  { key: 'wallets', title: 'Wallet crypto', subtitle: 'Tangem · BTC, ETH · sola lettura', icon: Wallet, color: '#B98CFF', live: true },
   { key: 'exchanges', title: 'Exchange', subtitle: 'API in sola lettura', icon: ArrowLeftRight, color: '#F0B90B' },
   { key: 'prices', title: 'Prezzi', subtitle: 'Crypto live da Kraken · azioni simulate', icon: Activity, color: '#2FD08A', live: true },
-  { key: 'rss', title: 'Feed RSS', subtitle: 'Testate finanziarie e crypto', icon: Rss, color: '#FF8A4C' },
+  { key: 'rss', title: 'Feed RSS', subtitle: 'Sole 24 Ore, ANSA, CNBC, FT, CoinDesk e altri', icon: Rss, color: '#FF8A4C', live: true },
 ];
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
@@ -141,7 +141,7 @@ export default function SettingsScreen() {
         <ListRow
           leading={<IconBadge icon={Info} color={theme.colors.textSecondary} />}
           title="Versione"
-          subtitle="Fase 1 · dati di esempio"
+          subtitle="Azioni IBKR: dati di esempio"
           value={Constants.expoConfig?.version ?? '0.1.0'}
         />
       </IslandCard>

@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight } from './icons';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 

@@ -20,7 +20,6 @@
     "expo-router": "~58.0.31",
     "expo-splash-screen": "~58.0.14",
     "expo-status-bar": "~58.0.5",
-    "expo-symbols": "~58.0.5",
     "expo-system-ui": "~58.0.7",
     "expo-web-browser": "~58.0.8",
     "lucide-react-native": "^1.73.0",
@@ -68,6 +67,7 @@
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|react-native-svg|react-native-gifted-charts|gifted-charts-core|@tanstack/.*|lucide-react-native)"
     ],
     "moduleNameMapper": {
+      "^lucide-react-native/icons/(.*)$": "<rootDir>/node_modules/lucide-react-native/dist/cjs/icons/$1.js",
       "^lucide-react-native$": "<rootDir>/node_modules/lucide-react-native/dist/cjs/lucide-react-native.js"
     },
     "resolver": "react-native-reanimated/jest/resolver",

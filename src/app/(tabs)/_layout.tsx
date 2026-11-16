@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router/js-tabs';
-import { ChartPie, Newspaper, Settings, Sparkles } from 'lucide-react-native';
+import { ChartPie, Newspaper, Settings, Sparkles } from '@/components/ui/icons';
 
 import { FloatingTabBar } from '@/components/navigation/floating-tab-bar';
 import { TabIcon } from '@/components/navigation/tab-icon';

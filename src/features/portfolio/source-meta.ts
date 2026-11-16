@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Building2, Landmark, Wallet, type LucideIcon } from 'lucide-react-native';
+import { ArrowLeftRight, Building2, Landmark, Wallet, type LucideIcon } from '@/components/ui/icons';
 
 import type { SourceKind } from '@/services/types';
 

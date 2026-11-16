@@ -1,4 +1,4 @@
-import { ArrowUp, Square } from 'lucide-react-native';
+import { ArrowUp, Square } from '@/components/ui/icons';
 import { TextInput, View } from 'react-native';
 
 import { Icon, PressableScale } from '@/components/ui';

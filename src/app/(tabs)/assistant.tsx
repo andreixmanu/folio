@@ -1,4 +1,4 @@
-import { SquarePen } from 'lucide-react-native';
+import { SquarePen } from '@/components/ui/icons';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import Animated, {

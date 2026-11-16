@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react-native';
+import type { LucideIcon } from '@/components/ui/icons';
 import type { ColorValue } from 'react-native';
 
 import { Icon } from '@/components/ui';
