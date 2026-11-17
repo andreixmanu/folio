@@ -17,3 +17,16 @@ id = "671d4e3224e742d3a0d812e76976a6b9"
 
 [vars]
 XAI_MODEL = "grok-4.7"
+
+# Open banking (Enable Banking, AIS read-only). Not active yet: until the
+# binding and the secrets below exist, every /bank/* route answers 503.
+# 1. npx wrangler d1 create folio-bank   (then paste the id below and uncomment)
+# 2. npx wrangler d1 migrations apply folio-bank --remote
+# 3. npx wrangler secret put ENABLE_BANKING_APP_ID
+#    npx wrangler secret put ENABLE_BANKING_PRIVATE_KEY   (PKCS#8 PEM)
+#    npx wrangler secret put BANK_REDIRECT_URL            (https://folio-api.manu-andrei.workers.dev/bank/callback)
+# [[d1_databases]]
+# binding = "BANK_DB"
+# database_name = "folio-bank"
+# database_id = "<id from wrangler d1 create>"
+# migrations_dir = "migrations"

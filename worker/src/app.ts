@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
 import { requireAppToken } from './auth';
+import { registerBankRoutes, type BankDeps } from './banking/routes';
 import { TtlCache } from './cache';
 import { handleChat } from './chat';
 import type { Env } from './env';
@@ -37,6 +38,8 @@ export type AppDeps = {
   newsMaxBytes?: number;
   /** Override the built-in feed list (tests). */
   newsFeeds?: readonly NewsFeed[];
+  /** Open-banking provider/store overrides (tests). */
+  bank?: BankDeps;
 };
 
 async function defaultFetchJson(url: string, fetchImpl: FetchImpl): Promise<unknown> {
@@ -74,7 +77,7 @@ export function createApp(deps: AppDeps = {}) {
   app.get('/', (c) =>
     c.json({
       name: 'folio-api',
-      endpoints: ['/health', '/prices', '/history', '/logo/:symbol', '/news', '/chat', '/wallets'],
+      endpoints: ['/health', '/prices', '/history', '/logo/:symbol', '/news', '/chat', '/wallets', '/bank/*'],
     }),
   );
   app.get('/health', (c) => c.json({ ok: true, time: new Date(now()).toISOString() }));
@@ -193,6 +196,8 @@ export function createApp(deps: AppDeps = {}) {
     c.header('Cache-Control', 'private, max-age=60');
     return c.json(body);
   });
+
+  registerBankRoutes(app, { now, fetch: fetchImpl, ...deps.bank });
 
   return app;
 }

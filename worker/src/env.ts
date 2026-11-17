@@ -14,4 +14,12 @@ export type Env = {
    * Empty or unset keeps the built-in public endpoints. Non-https entries are ignored.
    */
   ETH_RPC_URLS?: string;
+  /** Open banking (Enable Banking). All unset by default: bank routes answer 503. */
+  ENABLE_BANKING_APP_ID?: string;
+  /** PKCS#8 PEM private key of the Enable Banking application (Worker secret). */
+  ENABLE_BANKING_PRIVATE_KEY?: string;
+  /** Public URL of `GET /bank/callback`, e.g. `https://folio-api.<sub>.workers.dev/bank/callback`. */
+  BANK_REDIRECT_URL?: string;
+  /** D1 database with `migrations/0001_banking.sql` applied. */
+  BANK_DB?: D1Database;
 };

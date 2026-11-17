@@ -81,3 +81,30 @@ Set `EXPO_PUBLIC_API_URL` (the workers.dev URL from deploy) and `EXPO_PUBLIC_CHA
 ## Wallets (Tangem)
 
 `GET /wallets` reads Bitcoin (mempool.space, fallback blockstream.info) and Ethereum (public JSON-RPC) balances for the receive addresses in `BTC_ADDRESS` / `ETH_ADDRESS`. Those values never appear in responses, logs, or error messages. The route uses the same `X-Folio-Token` check as `/chat`, in-isolate TTL cache (~60 s, keyed by chain), and `Cache-Control: private, max-age=60`. The public Cache API is skipped for this path.
+
+## Open banking (Enable Banking, not active yet)
+
+Read-only account information (AIS) for Revolut, Isybank and ING Italia through
+[Enable Banking](https://enablebanking.com) in **restricted production mode**:
+free, personal use, only for accounts you link to your own application.
+Code lives in `src/banking/`; D1 schema in `migrations/0001_banking.sql`.
+
+Every `/bank/*` route answers `503 {"error":"bank_not_configured","missing":[…]}`
+until all of these exist: `ENABLE_BANKING_APP_ID`, `ENABLE_BANKING_PRIVATE_KEY`,
+`BANK_REDIRECT_URL` (secrets), the `BANK_DB` D1 binding and `APP_CHAT_TOKEN`.
+
+| Route | Auth | Purpose |
+| --- | --- | --- |
+| `GET /bank/status` | token | `{ configured, missing }` |
+| `GET /bank/institutions?country=IT&q=` | token | Banks (ASPSPs) for a country |
+| `POST /bank/consents` `{ institution: { name, country }, days?, returnTo? }` | token | Starts consent, returns the bank `url` |
+| `GET /bank/callback?code&state` | signed state | Bank redirect target; stores session + accounts |
+| `GET /bank/accounts?refresh=1` | token | Linked accounts (app model), optional balance refresh |
+| `GET /bank/accounts/:id/transactions?from&to&continuationKey&strategy` | token | One live provider page, also saved |
+| `POST /bank/accounts/:id/sync` | token | First run: longest history; then incremental with 5-day overlap |
+| `GET /bank/transactions?from&to&accountId&cursor&limit` | token | Saved rows, newest first, cursor-paginated |
+
+Setup (later, by Andrei): register at enablebanking.com/cp, create a
+**production** application with redirect URL `<worker>/bank/callback`, keep the
+generated private key, link the Revolut / Isybank / ING accounts ("Activate by
+linking accounts"), then follow the commented block in `wrangler.toml`.
