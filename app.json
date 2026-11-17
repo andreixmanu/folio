@@ -20,7 +20,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": true
+      "predictiveBackGestureEnabled": true,
+      "versionCode": 1
     },
     "web": {
       "output": "single",
@@ -45,11 +46,24 @@
           "style": "dark",
           "enforceContrast": false
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0105c1c2-4a0e-4857-9d9c-de8708c13fda"
+      }
+    },
+    "owner": "andreixmanu",
+    "updates": {
+      "url": "https://u.expo.dev/0105c1c2-4a0e-4857-9d9c-de8708c13fda"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
