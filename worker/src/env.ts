@@ -14,6 +14,10 @@ export type Env = {
    * Empty or unset keeps the built-in public endpoints. Non-https entries are ignored.
    */
   ETH_RPC_URLS?: string;
+  /** IBKR Flex Web Service token (Worker secret, read-only reports). */
+  IBKR_FLEX_TOKEN?: string;
+  /** IBKR Activity Flex Query id with Open Positions. */
+  IBKR_FLEX_QUERY_ID?: string;
   /** Open banking (Enable Banking). All unset by default: bank routes answer 503. */
   ENABLE_BANKING_APP_ID?: string;
   /** PKCS#8 PEM private key of the Enable Banking application (Worker secret). */

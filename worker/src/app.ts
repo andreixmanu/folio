@@ -6,6 +6,7 @@ import { registerBankRoutes, type BankDeps } from './banking/routes';
 import { TtlCache } from './cache';
 import { handleChat } from './chat';
 import type { Env } from './env';
+import { FlexError, getPositions } from './ibkr';
 import { fetchQuotes, fetchSeries, KrakenError, type Fetcher } from './kraken';
 import { defaultFetchLogo, logoUrl, normalizeLogoSymbol, type BinaryFetcher } from './logos';
 import { isNewsCategory, type NewsFeed } from './news/feeds';
@@ -38,6 +39,8 @@ export type AppDeps = {
   newsMaxBytes?: number;
   /** Override the built-in feed list (tests). */
   newsFeeds?: readonly NewsFeed[];
+  /** Flex GetStatement retry delays (tests pass zeros). */
+  flexDelaysMs?: number[];
   /** Open-banking provider/store overrides (tests). */
   bank?: BankDeps;
 };
@@ -77,7 +80,7 @@ export function createApp(deps: AppDeps = {}) {
   app.get('/', (c) =>
     c.json({
       name: 'folio-api',
-      endpoints: ['/health', '/prices', '/history', '/logo/:symbol', '/news', '/chat', '/wallets', '/bank/*'],
+      endpoints: ['/health', '/prices', '/history', '/logo/:symbol', '/news', '/chat', '/wallets', '/positions', '/bank/*'],
     }),
   );
   app.get('/health', (c) => c.json({ ok: true, time: new Date(now()).toISOString() }));
@@ -195,6 +198,21 @@ export function createApp(deps: AppDeps = {}) {
     });
     c.header('Cache-Control', 'private, max-age=60');
     return c.json(body);
+  });
+
+  /** GET /positions — IBKR open positions from the Flex Web Service (read-only, cached ~8h). */
+  app.get('/positions', async (c) => {
+    const denied = requireAppToken(c.env, c.req.header('X-Folio-Token') ?? '');
+    if (denied) return denied;
+    try {
+      const body = await getPositions(c.env, { fetch: fetchImpl, now, sleep, delaysMs: deps.flexDelaysMs });
+      c.header('Cache-Control', 'private, max-age=300');
+      return c.json(body);
+    } catch (e) {
+      if (e instanceof FlexError && e.code === 'not_configured') return c.json({ error: 'ibkr_not_configured' }, 503);
+      const msg = e instanceof FlexError ? e.message : 'IBKR non raggiungibile';
+      return c.json({ error: msg }, 502);
+    }
   });
 
   registerBankRoutes(app, { now, fetch: fetchImpl, ...deps.bank });

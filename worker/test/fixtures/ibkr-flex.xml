@@ -1,0 +1,15 @@
+<FlexQueryResponse queryName="Folio" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="U0000000" fromDate="20261116" toDate="20261116" period="LastBusinessDay" whenGenerated="20261117;084623">
+<OpenPositions>
+<OpenPosition accountId="U0000000" acctAlias="" model="" currency="EUR" fxRateToBase="1" assetCategory="STK" subCategory="ETF" symbol="XNAS" description="X NASDAQ 100 1C" conid="111111111" securityID="IE0000000001" securityIDType="ISIN" cusip="" isin="IE0000000001" listingExchange="IBIS2" multiplier="1" reportDate="20261116" position="10" markPrice="50.5" positionValue="505" openPrice="48" costBasisPrice="48" costBasisMoney="480" percentOfNAV="60.00" fifoPnlUnrealized="25" side="Long" levelOfDetail="SUMMARY" />
+<OpenPosition accountId="U0000000" acctAlias="" model="" currency="USD" fxRateToBase="0.9" assetCategory="STK" subCategory="COMMON" symbol="ACME" description="ACME CORP &amp; CO" conid="222222222" securityID="US0000000002" securityIDType="ISIN" isin="US0000000002" listingExchange="NASDAQ" multiplier="1" reportDate="20261116" position="4" markPrice="100" positionValue="400" costBasisPrice="90" costBasisMoney="360" fifoPnlUnrealized="40" side="Long" levelOfDetail="SUMMARY" />
+<OpenPosition accountId="U0000000" currency="USD" fxRateToBase="0.9" assetCategory="STK" symbol="ACME" position="4" markPrice="100" positionValue="400" levelOfDetail="LOT" />
+</OpenPositions>
+<CashReport>
+<CashReportCurrency accountId="U0000000" currency="BASE_SUMMARY" levelOfDetail="BaseCurrency" endingCash="120" />
+<CashReportCurrency accountId="U0000000" currency="EUR" levelOfDetail="Currency" endingCash="120" fxRateToBase="1" />
+</CashReport>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>

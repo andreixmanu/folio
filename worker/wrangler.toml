@@ -30,3 +30,8 @@ XAI_MODEL = "grok-4.7"
 # database_name = "folio-bank"
 # database_id = "<id from wrangler d1 create>"
 # migrations_dir = "migrations"
+
+# IBKR Flex Web Service (GET /positions, read-only). Worker secrets:
+#   npx wrangler secret put IBKR_FLEX_TOKEN
+#   npx wrangler secret put IBKR_FLEX_QUERY_ID
+# The parsed statement is cached in the XAI_AUTH KV under `ibkr:positions:v1` (~8h fresh).
