@@ -13,14 +13,6 @@ import { switchMode } from '@/lib/switch-mode';
 import { useModeTransitionStore } from '@/store/mode-transition-store';
 import { modeAccents, useTheme } from '@/theme';
 
-function runAfterAnimation(fn: () => void): void {
-  try {
-    scheduleOnRN(fn);
-  } catch {
-    fn();
-  }
-}
-
 const EASE = Easing.out(Easing.cubic);
 /** Base diameter. Scale is chosen so the circle reaches the farthest corner. */
 const BASE = 48;
@@ -64,7 +56,7 @@ export function ModeTransitionOverlay() {
     const fadeOut = () => {
       opacity.set(
         withTiming(0, { duration: reducedMotion ? 200 : 220, easing: EASE }, (finished) => {
-          if (finished) runAfterAnimation(finish);
+          if (finished) scheduleOnRN(finish);
         }),
       );
     };
@@ -86,7 +78,7 @@ export function ModeTransitionOverlay() {
     scale.set(0);
     scale.set(
       withTiming(coverScale(origin, width, height), { duration: 260, easing: EASE }, (finished) => {
-        if (finished) runAfterAnimation(commit);
+        if (finished) scheduleOnRN(commit);
       }),
     );
   }, [active, height, opacity, origin, reduced, scale, target, width]);
