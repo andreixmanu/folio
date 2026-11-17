@@ -1,19 +1,19 @@
 import { allocationByAsset, allocationByClass, allocationBySource } from '@/services/allocation';
-import { MOCK_POSITIONS, MOCK_SOURCES } from '@/services/mock/positions';
-import { mockStockPriceSource } from '@/services/mock/stock-prices';
 import { buildSnapshot, buildValueHistory } from '@/services/portfolio';
 import { withFallback } from '@/services/prices/fallback';
 import { TANGEM_SOURCE } from '@/services/sources';
 import type { Position, PriceQuote, PriceSeries, PriceSource } from '@/services/types';
 import { darkColors } from '@/theme/colors';
 
+import { FIXTURE_IBKR_POSITIONS, FIXTURE_STOCK_QUOTES, IBKR_SOURCE } from '../test/fixtures/ibkr';
+
 const CRYPTO_POSITIONS: Position[] = [
   { id: 'tangem-btc', sourceId: 'tangem', symbol: 'BTC', name: 'Bitcoin', assetClass: 'crypto', instrument: 'coin', quantity: 0.4215 },
   { id: 'tangem-eth', sourceId: 'tangem', symbol: 'ETH', name: 'Ethereum', assetClass: 'crypto', instrument: 'coin', quantity: 3.82 },
 ];
 
-const SOURCES = [...MOCK_SOURCES, TANGEM_SOURCE];
-const POSITIONS = [...MOCK_POSITIONS, ...CRYPTO_POSITIONS];
+const SOURCES = [IBKR_SOURCE, TANGEM_SOURCE];
+const POSITIONS = [...FIXTURE_IBKR_POSITIONS, ...CRYPTO_POSITIONS];
 
 const CRYPTO: PriceQuote[] = [
   { symbol: 'BTC', price: 64_815.1, changePct: -2.6 },
@@ -21,8 +21,7 @@ const CRYPTO: PriceQuote[] = [
 ];
 
 async function snapshot() {
-  const stocks = await mockStockPriceSource.getQuotes(['AAPL', 'CSPX', 'MSFT', 'NVDA', 'VWCE']);
-  return buildSnapshot(SOURCES, POSITIONS, [...CRYPTO, ...stocks.quotes], '2026-11-12T16:00:00Z');
+  return buildSnapshot(SOURCES, POSITIONS, [...CRYPTO, ...FIXTURE_STOCK_QUOTES], '2026-11-12T16:00:00Z');
 }
 
 describe('buildSnapshot', () => {

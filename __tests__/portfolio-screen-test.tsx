@@ -2,12 +2,12 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import PortfolioScreen from '@/app/(invest)/portfolio';
 import { HoldingsBySource } from '@/features/portfolio/holdings-by-source';
-import { MOCK_POSITIONS, MOCK_SOURCES } from '@/services/mock/positions';
-import { mockStockPriceSource } from '@/services/mock/stock-prices';
 import { buildSnapshot } from '@/services/portfolio';
 import { priceSources, TANGEM_SOURCE } from '@/services/sources';
+import { fetchIbkrPositions } from '@/services/ibkr';
 import { fetchWallets, type WalletsResponse } from '@/services/wallets';
 
+import { FIXTURE_IBKR_POSITIONS, FIXTURE_STOCK_QUOTES, IBKR_FIXTURE, IBKR_SOURCE } from '../test/fixtures/ibkr';
 import { renderWithProviders } from '../test/test-utils';
 
 const safeArea = { top: 0, bottom: 0, left: 0, right: 0 };
@@ -22,6 +22,11 @@ jest.mock('react-native-safe-area-context', () => {
 jest.mock('@/services/wallets', () => {
   const actual = jest.requireActual<typeof import('@/services/wallets')>('@/services/wallets');
   return { ...actual, fetchWallets: jest.fn() };
+});
+
+jest.mock('@/services/ibkr', () => {
+  const actual = jest.requireActual<typeof import('@/services/ibkr')>('@/services/ibkr');
+  return { ...actual, fetchIbkrPositions: jest.fn() };
 });
 
 jest.mock('@/services/sources', () => {
@@ -50,6 +55,7 @@ jest.mock('@/services/sources', () => {
 });
 
 const fetchWalletsMock = fetchWallets as jest.MockedFunction<typeof fetchWallets>;
+const fetchIbkrMock = fetchIbkrPositions as jest.MockedFunction<typeof fetchIbkrPositions>;
 const getQuotesMock = priceSources.crypto.getQuotes as jest.Mock;
 
 const walletsOk: WalletsResponse = {
@@ -88,12 +94,13 @@ function triggerRefresh() {
 describe('PortfolioScreen wallets', () => {
   beforeEach(() => {
     fetchWalletsMock.mockReset();
+    fetchIbkrMock.mockReset();
+    fetchIbkrMock.mockResolvedValue(IBKR_FIXTURE);
     getQuotesMock.mockClear();
   });
 
   test('shows stocks and an inline note when /wallets fails', async () => {
-    const stocks = await mockStockPriceSource.getQuotes(MOCK_POSITIONS.map((p) => p.symbol));
-    const snapshot = buildSnapshot([...MOCK_SOURCES, TANGEM_SOURCE], MOCK_POSITIONS, stocks.quotes, 't');
+    const snapshot = buildSnapshot([IBKR_SOURCE, TANGEM_SOURCE], FIXTURE_IBKR_POSITIONS, FIXTURE_STOCK_QUOTES, 't');
     const onRetry = jest.fn();
     await renderWithProviders(
       <HoldingsBySource snapshot={snapshot} walletNote="Tangem non raggiungibile · riprova" onRetryWallets={onRetry} />,

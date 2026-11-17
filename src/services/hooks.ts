@@ -1,17 +1,19 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { MOCK_POSITIONS } from './mock/positions';
+import { fetchIbkrPositions, ibkrFlatSeries, ibkrQuotes, ibkrSource, ibkrStatusNote, mapIbkrToPositions } from './ibkr';
 import { buildSnapshot, buildValueHistory } from './portfolio';
 import { queryKeys } from './query-keys';
 import { RANGE_SPECS } from './ranges';
-import { newsSource, positionsSource, priceSources } from './sources';
-import type { AssetClass, NewsCategory, Position, TimeRange } from './types';
+import { newsSource, priceSources, TANGEM_SOURCE } from './sources';
+import type { AssetClass, NewsCategory, Position, Source, TimeRange } from './types';
 import { fetchWallets, mapWalletsToPositions, walletStatusNote } from './wallets';
 
 /** Crypto tickers refresh every 30s while the app is focused (the Worker caches for 30s too). */
 export const QUOTE_REFRESH_MS = 30_000;
 const WALLETS_STALE_MS = 60_000;
+/** IBKR Flex is an end-of-day statement; the Worker caches it for ~8h. */
+const IBKR_STALE_MS = 30 * 60_000;
 
 export type PriceStatus = 'loading' | 'live' | 'stale' | 'error';
 
@@ -29,57 +31,71 @@ function useWallets() {
   });
 }
 
-function usePositions() {
-  const wallets = useWallets();
-  const sources = useQuery({
-    queryKey: queryKeys.sources,
-    queryFn: () => positionsSource.getSources(),
-    staleTime: Infinity,
+export function useIbkrPositions() {
+  return useQuery({
+    queryKey: queryKeys.ibkr,
+    queryFn: ({ signal }) => fetchIbkrPositions(signal),
+    staleTime: IBKR_STALE_MS,
+    refetchOnWindowFocus: true,
+    retry: 1,
   });
-  const positions = useMemo(
-    () => [...MOCK_POSITIONS, ...(wallets.data ? mapWalletsToPositions(wallets.data) : [])],
-    [wallets.data],
-  );
-  return { sources, positions, wallets };
 }
 
-function useQuotes(assetClass: AssetClass, symbols: string[], enabled: boolean) {
+function usePositions() {
+  const wallets = useWallets();
+  const ibkr = useIbkrPositions();
+  const sources = useMemo<Source[]>(() => [ibkrSource(ibkr.data), TANGEM_SOURCE], [ibkr.data]);
+  const positions = useMemo(
+    () => [
+      ...(ibkr.data ? mapIbkrToPositions(ibkr.data) : []),
+      ...(wallets.data ? mapWalletsToPositions(wallets.data) : []),
+    ],
+    [ibkr.data, wallets.data],
+  );
+  const settled = (wallets.isSuccess || wallets.isError) && (ibkr.isSuccess || ibkr.isError);
+  return { sources, positions, wallets, ibkr, settled };
+}
+
+function useCryptoQuotes(symbols: string[], enabled: boolean) {
   return useQuery({
-    queryKey: queryKeys.quotes(assetClass, symbols),
-    queryFn: ({ signal }) => priceSources[assetClass].getQuotes(symbols, signal),
+    queryKey: queryKeys.quotes('crypto', symbols),
+    queryFn: ({ signal }) => priceSources.crypto.getQuotes(symbols, signal),
     enabled,
-    staleTime: assetClass === 'crypto' ? QUOTE_REFRESH_MS - 5_000 : 5 * 60_000,
-    refetchInterval: assetClass === 'crypto' ? QUOTE_REFRESH_MS : false,
+    staleTime: QUOTE_REFRESH_MS - 5_000,
+    refetchInterval: QUOTE_REFRESH_MS,
     refetchIntervalInBackground: false,
     placeholderData: keepPreviousData,
     retry: 2,
   });
 }
 
+function joinNotes(...notes: (string | null)[]): string | null {
+  const list = notes.filter((n): n is string => !!n);
+  return list.length ? list.join(' · ') : null;
+}
+
 /**
- * Portfolio snapshot = IBKR mock stocks + Tangem quantities × prices (crypto live from Kraken).
- * Degrades gracefully: on a failed price refresh the last quotes stay on screen (`stale`).
- * A failed `/wallets` fetch still shows stocks plus an inline note.
+ * Portfolio snapshot = IBKR stocks/ETFs (Flex end-of-day marks, EUR) + Tangem quantities ×
+ * live Kraken prices. Degrades gracefully: on a failed price refresh the last quotes stay
+ * on screen (`stale`); a failed `/wallets` or `/positions` still shows the other source
+ * plus an inline note.
  */
 export function usePortfolio() {
-  const { sources, positions, wallets } = usePositions();
-  const walletsSettled = wallets.isSuccess || wallets.isError;
+  const { sources, positions, wallets, ibkr, settled } = usePositions();
   const cryptoSymbols = symbolsOf(positions, 'crypto');
-  const stockSymbols = symbolsOf(positions, 'stocks');
-  const crypto = useQuotes('crypto', cryptoSymbols, walletsSettled);
-  const stocks = useQuotes('stocks', stockSymbols, walletsSettled);
+  const crypto = useCryptoQuotes(cryptoSymbols, settled);
 
   const data = useMemo(
     () =>
-      walletsSettled && sources.data && crypto.data && stocks.data
+      settled && crypto.data
         ? buildSnapshot(
-            sources.data,
+            sources,
             positions,
-            [...crypto.data.quotes, ...stocks.data.quotes],
+            [...crypto.data.quotes, ...(ibkr.data ? ibkrQuotes(ibkr.data) : [])],
             crypto.data.updatedAt,
           )
         : undefined,
-    [walletsSettled, sources.data, positions, crypto.data, stocks.data],
+    [settled, sources, positions, crypto.data, ibkr.data],
   );
 
   const status: PriceStatus = crypto.isError
@@ -94,36 +110,31 @@ export function usePortfolio() {
     data,
     status,
     error: crypto.error,
-    walletNote: walletStatusNote(wallets.data, wallets.isError),
+    walletNote: joinNotes(ibkrStatusNote(ibkr.data, ibkr.isError), walletStatusNote(wallets.data, wallets.isError)),
+    /** IBKR statement date (`YYYY-MM-DD`), end-of-day values. */
+    ibkrAsOf: ibkr.data?.asOf ?? null,
     /** Epoch ms of the last successful crypto price fetch. */
     pricesUpdatedAt: crypto.dataUpdatedAt,
-    isFetching: crypto.isFetching || wallets.isFetching,
-    isRefetching: crypto.isRefetching || stocks.isRefetching || wallets.isRefetching,
-    refetch: () => Promise.all([wallets.refetch(), crypto.refetch(), stocks.refetch()]),
-    refetchWallets: () => wallets.refetch(),
+    isFetching: crypto.isFetching || wallets.isFetching || ibkr.isFetching,
+    isRefetching: crypto.isRefetching || wallets.isRefetching || ibkr.isRefetching,
+    refetch: () => Promise.all([wallets.refetch(), ibkr.refetch(), crypto.refetch()]),
+    refetchWallets: () => Promise.all([wallets.refetch(), ibkr.refetch()]),
   };
 }
 
 /**
- * Value history for a range = current quantities × historical closes
- * (Kraken OHLC for crypto, mock for stocks). `live` pins the last point to the live total.
+ * Value history for a range = current quantities × historical closes (Kraken OHLC for
+ * crypto). Stocks have no price history yet, so IBKR holdings contribute a flat line at
+ * their last statement mark. `live` pins the last point to the live total.
  */
 export function useValueHistory(range: TimeRange, live?: { t: number; value: number }) {
-  const { positions, wallets } = usePositions();
-  const walletsSettled = wallets.isSuccess || wallets.isError;
+  const { positions, ibkr, settled } = usePositions();
   const cryptoSymbols = symbolsOf(positions, 'crypto');
-  const stockSymbols = symbolsOf(positions, 'stocks');
 
   const query = useQuery({
-    queryKey: queryKeys.history(range, [...cryptoSymbols, ...stockSymbols]),
-    enabled: walletsSettled,
-    queryFn: async ({ signal }) => {
-      const [c, s] = await Promise.all([
-        priceSources.crypto.getHistory(cryptoSymbols, range, signal),
-        priceSources.stocks.getHistory(stockSymbols, range, signal),
-      ]);
-      return [...c.series, ...s.series];
-    },
+    queryKey: queryKeys.history(range, cryptoSymbols),
+    enabled: settled,
+    queryFn: async ({ signal }) => (await priceSources.crypto.getHistory(cryptoSymbols, range, signal)).series,
     staleTime: RANGE_SPECS[range].staleMs,
     placeholderData: keepPreviousData,
     retry: 1,
@@ -131,18 +142,20 @@ export function useValueHistory(range: TimeRange, live?: { t: number; value: num
 
   const liveT = live?.t;
   const liveValue = live?.value;
-  const data = useMemo(
-    () =>
-      query.data
-        ? buildValueHistory(
-            positions,
-            query.data,
-            range,
-            liveT && liveValue ? { t: liveT, value: liveValue } : undefined,
-          )
-        : undefined,
-    [query.data, positions, range, liveT, liveValue],
-  );
+  const data = useMemo(() => {
+    if (!query.data) return undefined;
+    const cryptoEnd = Math.max(0, ...query.data.map((x) => x.points.at(-1)?.t ?? 0));
+    const end = Math.max(cryptoEnd, liveT ?? 0);
+    const spec = RANGE_SPECS[range];
+    const start = cryptoEnd > 0 ? 0 : end - (spec.points - 1) * spec.intervalMin * 60_000;
+    const stockSeries = ibkr.data && end > 0 ? ibkrFlatSeries(ibkr.data, start, end) : [];
+    return buildValueHistory(
+      positions,
+      [...query.data, ...stockSeries],
+      range,
+      liveT && liveValue ? { t: liveT, value: liveValue } : undefined,
+    );
+  }, [query.data, ibkr.data, positions, range, liveT, liveValue]);
 
   return {
     data,

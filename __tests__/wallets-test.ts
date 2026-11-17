@@ -1,5 +1,4 @@
-import { MOCK_POSITIONS } from '@/services/mock/positions';
-import { createCompositePositionsSource, TANGEM_SOURCE } from '@/services/sources';
+import { SOURCES, TANGEM_SOURCE } from '@/services/sources';
 import { fetchWallets, mapWalletsToPositions, walletStatusNote, type WalletsResponse } from '@/services/wallets';
 
 const BTC_ADDRESS = 'bc1qtestaddress000000000000000000000000000';
@@ -88,21 +87,10 @@ describe('mapWalletsToPositions', () => {
   });
 });
 
-describe('createCompositePositionsSource', () => {
-  test('keeps IBKR stocks when wallets fail and merges crypto when they succeed', async () => {
-    const failing = createCompositePositionsSource(async () => {
-      throw new Error('network');
-    });
-    const stocksOnly = await failing.getPositions();
-    expect(stocksOnly).toEqual(MOCK_POSITIONS);
-    expect(stocksOnly.every((p) => p.assetClass === 'stocks')).toBe(true);
-    expect((await failing.getSources()).map((s) => s.id)).toEqual(['ibkr', 'tangem']);
-
-    const ok = createCompositePositionsSource(async () => walletsOk);
-    const merged = await ok.getPositions();
-    expect(merged.filter((p) => p.assetClass === 'stocks')).toEqual(MOCK_POSITIONS);
-    expect(merged.map((p) => p.id)).toEqual(expect.arrayContaining(['ibkr-vwce', 'tangem-btc', 'tangem-eth', 'tangem-usdc']));
-    expect(JSON.stringify(merged)).not.toContain(BTC_ADDRESS);
+describe('sources', () => {
+  test('IBKR then Tangem; wallet positions carry no address', () => {
+    expect(SOURCES.map((x) => x.id)).toEqual(['ibkr', 'tangem']);
+    expect(JSON.stringify(mapWalletsToPositions(walletsOk))).not.toContain(BTC_ADDRESS);
   });
 });
 

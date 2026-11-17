@@ -1,6 +1,6 @@
 /**
  * Domain types shared by the UI and every data source.
- * Crypto quantities come from the Tangem wallet (`/wallets`); stocks are still mock IBKR.
+ * Crypto quantities come from the Tangem wallet (`/wallets`); stocks/ETFs come from IBKR Flex (`/positions`).
  */
 
 export type TimeRange = '1D' | '1W' | '1M' | '1Y' | 'ALL';
@@ -93,7 +93,7 @@ export type NewsArticle = {
 /** A position without market data: what you hold and where (quantities only). */
 export type Position = Omit<Holding, 'price' | 'value' | 'changePct'>;
 
-/** Where positions come from (mock IBKR + Tangem wallet today). */
+/** Where positions come from (IBKR Flex + Tangem wallet today). */
 export interface PositionsSource {
   getSources(): Promise<Source[]>;
   getPositions(): Promise<Position[]>;

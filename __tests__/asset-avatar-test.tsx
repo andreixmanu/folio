@@ -3,8 +3,8 @@ import { Platform } from 'react-native';
 
 import { AssetAvatar } from '@/components/ui/asset-avatar';
 import { ASSET_ICONS } from '@/components/ui/asset-icons.generated';
-import { MOCK_POSITIONS } from '@/services/mock/positions';
 
+import { FIXTURE_IBKR_POSITIONS } from '../test/fixtures/ibkr';
 import { renderWithProviders } from '../test/test-utils';
 
 // Render expo-image as a plain host view so the test can read its props.
@@ -24,8 +24,8 @@ describe('<AssetAvatar />', () => {
     setPlatform(originalOS);
   });
 
-  test('every mock holding and known crypto symbol has a bundled logo', () => {
-    const symbols = [...MOCK_POSITIONS.map((p) => p.symbol), 'BTC', 'ETH', 'USDC', 'USDT'];
+  test('every sample stock and known crypto symbol has a bundled logo', () => {
+    const symbols = [...FIXTURE_IBKR_POSITIONS.map((p) => p.symbol), 'BTC', 'ETH', 'USDC', 'USDT'];
     const missing = [...new Set(symbols)].filter((s) => !ASSET_ICONS[s]);
     expect(missing).toEqual([]);
   });
