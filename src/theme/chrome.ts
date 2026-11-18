@@ -4,7 +4,7 @@ import type { ColorSchemeName } from './theme-provider';
 
 /**
  * Hairline and shadow for the floating tab bar and the round mode button.
- * The frosted fill itself lives in `FrostedFill` (expo-blur plus a tint fallback).
+ * The fill lives in `FrostedFill`: real blur on iOS and web, `floatingFill` on Android.
  */
 export function floatingSurface(scheme: ColorSchemeName): ViewStyle {
   if (scheme === 'dark') {
@@ -19,6 +19,14 @@ export function floatingSurface(scheme: ColorSchemeName): ViewStyle {
     borderColor: 'rgba(255,255,255,0.85)',
     boxShadow: '0px 10px 32px rgba(40,30,80,0.12)',
   };
+}
+
+/**
+ * Dense translucent fill for Android, where real blur is not used.
+ * Same colors as the pre-blur chrome, so the pill stays readable.
+ */
+export function floatingFill(scheme: ColorSchemeName): string {
+  return scheme === 'dark' ? 'rgba(18,18,24,0.88)' : 'rgba(255,255,255,0.92)';
 }
 
 /** Header icon button: a quiet translucent disc, not a solid island. */

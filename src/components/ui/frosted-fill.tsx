@@ -1,7 +1,6 @@
 import { BlurView, type BlurTint } from 'expo-blur';
 import { Platform, StyleSheet } from 'react-native';
 
-import { useBlurTarget } from '@/components/navigation/blur-target';
 import { useTheme, type ColorSchemeName } from '@/theme';
 
 /** Blur strength for the floating chrome, tuned per theme. */
@@ -31,15 +30,20 @@ const WEB_FALLBACK_FILL: Record<ColorSchemeName, string> = {
 };
 
 /**
- * Frosted glass layer for the floating tab bar (and the mode button).
+ * Frosted glass for the floating tab bar and the mode button, on iOS and web.
  * Must sit inside a parent with `overflow: 'hidden'` and a matching
  * `borderRadius`, so the blur is clipped to the pill. Keep shadow and
  * the hairline border on the outer view — `overflow: 'hidden'` would
  * clip the shadow.
+ *
+ * Android does not use this file. SDK 58 blur draws a `BlurTargetView`,
+ * and that target must not contain the `BlurView` that points at it
+ * (Dimezis BlurView 3: the target may not contain a blur view aimed at
+ * the same target) and must not wrap a navigator. The chrome is inside
+ * the root Stack, so a shared target around the Stack crashes on launch.
  */
 export function FrostedFill() {
   const theme = useTheme();
-  const blurTarget = useBlurTarget();
   const scheme = theme.scheme;
   const fallback = Platform.OS === 'web' ? WEB_FALLBACK_FILL[scheme] : FALLBACK_FILL[scheme];
 
@@ -48,11 +52,6 @@ export function FrostedFill() {
       pointerEvents="none"
       intensity={INTENSITY[scheme]}
       tint={TINT[scheme]}
-      // SDK 58 renamed `experimentalBlurMethod` to `blurMethod`.
-      blurMethod="dimezisBlurView"
-      blurTarget={blurTarget}
-      // Default factor is 4, which makes Android look much weaker than iOS.
-      blurReductionFactor={2}
       style={[StyleSheet.absoluteFill, { backgroundColor: fallback }]}
     />
   );
