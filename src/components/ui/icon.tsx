@@ -29,7 +29,9 @@ export function Icon({
       color={color}
       strokeWidth={strokeWidth}
       absoluteStrokeWidth={false}
-      fill={fill}
+      // An explicit `fill={undefined}` overrides Lucide's default `none`, and react-native-svg
+      // then paints the shape black. Always pass a real value.
+      fill={fill ?? 'none'}
       accessible={accessibilityLabel != null}
       accessibilityRole={accessibilityLabel ? 'image' : undefined}
       accessibilityLabel={accessibilityLabel}
