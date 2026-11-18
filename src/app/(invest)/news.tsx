@@ -58,7 +58,7 @@ export default function NewsScreen() {
             </AppText>
           </IslandCard>
         ) : (
-          <IslandCard index={0} padding="lg" style={{ paddingVertical: theme.spacing.xs }}>
+          <IslandCard index={0} style={{ paddingVertical: theme.spacing.xs }}>
             {news.data.map((article, i) => (
               <Animated.View key={article.id} entering={enterFade(i)}>
                 {i > 0 ? <RowSeparator inset={0} /> : null}
@@ -68,7 +68,7 @@ export default function NewsScreen() {
           </IslandCard>
         )
       ) : (
-        <IslandCard index={0} padding="lg" style={{ paddingVertical: theme.spacing.xs }}>
+        <IslandCard index={0} style={{ paddingVertical: theme.spacing.xs }}>
           <View style={{ gap: theme.spacing.lg, paddingVertical: theme.spacing.md }}>
             {[0, 1, 2, 3].map((i) => (
               <View key={i} style={{ gap: 6 }}>

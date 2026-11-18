@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { RefreshControl, View } from 'react-native';
+import { RefreshControl, View, useWindowDimensions } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedScrollHandler,
@@ -10,26 +10,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/theme';
 
-import { HeroGlow } from './hero-glow';
+import { AmbientBackground } from './hero-glow';
 
 export type ScreenProps = {
   children: ReactNode;
   refreshing?: boolean;
   onRefresh?: () => void;
   testID?: string;
-  /** Soft mode-accent glow behind the top of the screen (wallet-home style). */
-  glow?: boolean;
 };
 
 /**
- * Scrollable screen container for edge-to-edge layouts:
- * - content scrolls under the transparent status bar;
- * - a scrim fades in behind the status bar once you scroll;
- * - bottom padding clears the floating tab bar and the gesture/navigation bar.
+ * Scrollable screen on the Seamless canvas.
+ * The ambient wash is inside the scroll content, so the blooms travel with the
+ * page the way they do in the full-height mockup. A scrim fades in behind the
+ * status bar once the title scrolls under it.
  */
-export function Screen({ children, refreshing = false, onRefresh, testID, glow = false }: ScreenProps) {
+export function Screen({ children, refreshing = false, onRefresh, testID }: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const scrollY = useSharedValue(0);
 
   const onScroll = useAnimatedScrollHandler((e) => {
@@ -40,35 +39,25 @@ export function Screen({ children, refreshing = false, onRefresh, testID, glow =
     opacity: interpolate(scrollY.get(), [0, 24], [0, 1], 'clamp'),
   }));
 
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.get(), [0, 220], [1, 0], 'clamp'),
-  }));
-
-  const bottomPadding =
+  const topPad = insets.top + theme.spacing.xs;
+  const bottomPad =
     theme.layout.tabBarHeight + theme.layout.tabBarBottomGap + insets.bottom + theme.spacing.lg;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }} testID={testID}>
-      {glow ? (
-        <Animated.View
-          pointerEvents="none"
-          style={[{ position: 'absolute', top: 0, left: 0, right: 0 }, glowStyle]}>
-          <HeroGlow />
-        </Animated.View>
-      ) : null}
       <Animated.ScrollView
         testID="screen-scroll"
         onScroll={onScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingTop: insets.top + theme.spacing.xs,
-          paddingBottom: bottomPadding,
+          minHeight: windowHeight,
+          paddingTop: topPad,
+          paddingBottom: bottomPad,
           paddingHorizontal: theme.layout.screenPadding,
           width: '100%',
           maxWidth: theme.layout.maxContentWidth,
           alignSelf: 'center',
-          gap: theme.spacing.md,
         }}
         refreshControl={
           onRefresh ? (
@@ -82,7 +71,20 @@ export function Screen({ children, refreshing = false, onRefresh, testID, glow =
             />
           ) : undefined
         }>
-        {children}
+        {/* Bleed through the scroll padding so the wash reaches the screen edges. */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: -topPad,
+            left: -theme.layout.screenPadding,
+            right: -theme.layout.screenPadding,
+            bottom: -bottomPad,
+            overflow: 'hidden',
+          }}>
+          <AmbientBackground />
+        </View>
+        <View style={{ gap: theme.spacing.xl }}>{children}</View>
       </Animated.ScrollView>
       <Animated.View
         pointerEvents="none"

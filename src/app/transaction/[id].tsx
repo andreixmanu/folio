@@ -2,7 +2,17 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { AppText, ErrorState, Icon, IslandCard, PressableScale, RowSeparator, Screen, Skeleton } from '@/components/ui';
+import {
+  AppText,
+  ErrorState,
+  Icon,
+  IconButton,
+  IslandCard,
+  PressableScale,
+  RowSeparator,
+  Screen,
+  Skeleton,
+} from '@/components/ui';
 import { ChevronLeft, ChevronRight } from '@/components/ui/icons';
 import { CategoryPickerSheet } from '@/features/budget/components/category-picker-sheet';
 import { CategoryBadge, MoneyText } from '@/features/budget/components';
@@ -51,25 +61,7 @@ function goBack() {
 }
 
 function BackHeader() {
-  const theme = useTheme();
-  return (
-    <PressableScale
-      haptic="selection"
-      onPress={goBack}
-      accessibilityLabel="Indietro"
-      style={{
-        width: 36,
-        height: 36,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: theme.radii.pill,
-        backgroundColor: theme.colors.surface,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-      }}>
-      <Icon icon={ChevronLeft} size={22} color={theme.colors.text} />
-    </PressableScale>
-  );
+  return <IconButton icon={ChevronLeft} accessibilityLabel="Indietro" onPress={goBack} />;
 }
 
 function DetailSkeleton() {

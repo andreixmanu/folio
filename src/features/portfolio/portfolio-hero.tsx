@@ -56,28 +56,30 @@ export function PortfolioHero({
         paddingBottom: theme.spacing.sm,
         gap: theme.spacing.md,
       }}>
-      <HeroBalance value={totalValue} masked={masked} testID="total-value" />
-      <View style={{ alignItems: 'center', gap: theme.spacing.sm }}>
-        <LiveIndicator status={status} updatedAt={pricesUpdatedAt} />
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-            gap: theme.spacing.sm,
-          }}>
-          <ChangeChip
-            percent={changePct}
-            amount={change}
-            masked={masked}
-            testID="total-change"
-            style={{ alignSelf: 'center' }}
-          />
-          <AppText variant="caption" color="textSecondary">
-            {RANGE_CAPTION[range]}
-          </AppText>
+      <View style={{ alignItems: 'center' }}>
+        <HeroBalance value={totalValue} masked={masked} testID="total-value" />
+        <View style={{ position: 'absolute', right: -14, top: 18 }}>
+          <LiveIndicator status={status} updatedAt={pricesUpdatedAt} />
         </View>
+      </View>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: theme.spacing.sm,
+        }}>
+        <ChangeChip
+          percent={changePct}
+          amount={change}
+          masked={masked}
+          testID="total-change"
+          style={{ alignSelf: 'center' }}
+        />
+        <AppText variant="caption" color="textSecondary">
+          {RANGE_CAPTION[range]}
+        </AppText>
       </View>
 
       <View style={{ alignSelf: 'stretch', marginTop: theme.spacing.xs }}>

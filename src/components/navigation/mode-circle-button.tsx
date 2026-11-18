@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { ChartPie, Wallet } from '@/components/ui/icons';
 import { useModeStore, type AppMode } from '@/store/mode-store';
 import { useModeTransitionStore, type ModeTransitionOrigin } from '@/store/mode-transition-store';
-import { modeAccents, useTheme } from '@/theme';
+import { floatingSurface, modeAccents, useTheme } from '@/theme';
 
 type HostMeasure = {
   measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) => void;
@@ -60,13 +60,11 @@ export function ModeCircleButton() {
           width: size,
           height: size,
           borderRadius: size / 2,
+          overflow: 'hidden',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: theme.colors.surfaceElevated,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
         },
-        theme.elevation(3),
+        floatingSurface(theme.scheme),
       ]}>
       <Icon icon={other === 'budget' ? Wallet : ChartPie} size={22} color={accent} />
     </Pressable>

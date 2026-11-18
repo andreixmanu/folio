@@ -9,11 +9,11 @@ import { PressableScale } from './pressable-scale';
 export type IslandCardProps = {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
-  /** Inner padding token. Defaults to `lg`. */
+  /** Inner padding token. Defaults to none so sections sit on the canvas. */
   padding?: SpacingToken;
-  /** Elevation level of the floating surface. */
+  /** Kept for call-site compatibility. Seamless sections are not elevated. */
   elevated?: 0 | 1 | 2 | 3;
-  /** Surface tone. `elevated` is one step lighter than the default. */
+  /** Kept for call-site compatibility. Seamless sections have no surface fill. */
   tone?: 'default' | 'elevated' | 'accent';
   /** Position in a list, used to stagger the entering animation. Omit to disable. */
   index?: number;
@@ -23,38 +23,25 @@ export type IslandCardProps = {
 };
 
 /**
- * The core "floating island": a rounded, softly elevated surface detached from
- * the canvas by spacing, a hairline border and a shadow.
+ * Seamless section. The name remains so existing testIDs and call sites stay
+ * put; the floating surface (fill, radius, shadow, hairline card) is gone.
+ * Content sits directly on the ambient canvas.
  */
 export function IslandCard({
   children,
   style,
-  padding = 'lg',
-  elevated = 1,
-  tone = 'default',
+  padding = 'none',
   index,
   onPress,
   accessibilityLabel,
   testID,
 }: IslandCardProps) {
   const theme = useTheme();
-  const backgroundColor =
-    tone === 'accent'
-      ? theme.colors.accent
-      : tone === 'elevated'
-        ? theme.colors.surfaceElevated
-        : theme.colors.surface;
-
   const surfaceStyle: StyleProp<ViewStyle> = [
     {
-      backgroundColor,
-      borderRadius: theme.radii.xl,
+      backgroundColor: 'transparent',
       padding: theme.spacing[padding],
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderCurve: 'continuous',
     },
-    theme.elevation(elevated),
     style,
   ];
 

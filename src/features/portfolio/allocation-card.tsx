@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 
 import { AllocationDonut } from '@/components/charts/allocation-donut';
-import { AppText, IslandCard, SegmentedControl } from '@/components/ui';
+import { AppText, SegmentedControl } from '@/components/ui';
 import { allocationByAsset, allocationByClass, allocationBySource } from '@/services/allocation';
 import type { PortfolioSnapshot } from '@/services/types';
 import { useUiStore, type AllocationMode } from '@/store/ui-store';
@@ -15,7 +15,7 @@ const MODE_OPTIONS: { value: AllocationMode; label: string }[] = [
   { value: 'source', label: 'Fonte' },
 ];
 
-/** Allocation island: by asset class, by asset, or by source (per-source summary rows). */
+/** Allocation on the canvas: title, text tabs, donut and a hairline legend. */
 export function AllocationCard({ snapshot }: { snapshot: PortfolioSnapshot }) {
   const theme = useTheme();
   const mode = useUiStore((s) => s.allocationMode);
@@ -33,22 +33,25 @@ export function AllocationCard({ snapshot }: { snapshot: PortfolioSnapshot }) {
           );
 
   return (
-    <IslandCard index={1} testID="allocation-card">
-      <View style={{ gap: theme.spacing.md }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <AppText variant="headline">Allocazione</AppText>
-          <View style={{ width: 186 }}>
-            <SegmentedControl
-              options={MODE_OPTIONS}
-              value={mode}
-              onChange={setMode}
-              size="sm"
-              testID="allocation-mode"
-            />
-          </View>
-        </View>
-        <AllocationDonut key={mode} slices={slices} masked={masked} />
+    <View testID="allocation-card" style={{ gap: theme.spacing.sm }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          minHeight: 32,
+        }}>
+        <AppText variant="headline">Allocazione</AppText>
+        <SegmentedControl
+          options={MODE_OPTIONS}
+          value={mode}
+          onChange={setMode}
+          size="sm"
+          variant="underline"
+          testID="allocation-mode"
+        />
       </View>
-    </IslandCard>
+      <AllocationDonut key={mode} slices={slices} masked={masked} />
+    </View>
   );
 }

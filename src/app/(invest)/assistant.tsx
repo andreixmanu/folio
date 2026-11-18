@@ -1,6 +1,6 @@
 import { SquarePen } from '@/components/ui/icons';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, ScrollView, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedKeyboard,
   useAnimatedReaction,
@@ -11,7 +11,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, IconButton, ScreenHeader } from '@/components/ui';
+import { AmbientBackground, AppText, IconButton, ScreenHeader } from '@/components/ui';
 import { Composer } from '@/features/assistant/composer';
 import { MessageList } from '@/features/assistant/messages';
 import { Suggestions } from '@/features/assistant/suggestions';
@@ -152,6 +152,9 @@ export default function AssistantScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }} testID="assistant-screen">
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <AmbientBackground />
+      </View>
       {Platform.OS === 'android' ? (
         <AndroidKeyboardBoost eventHeight={keyboard.height} onHeight={onReanimatedCovered} />
       ) : null}

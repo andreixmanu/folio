@@ -20,7 +20,7 @@ import { AppText } from '@/components/ui/text';
 import { haptics } from '@/lib/haptics';
 import { useKeyboardVisible } from '@/lib/use-keyboard-visible';
 import { useModeStore, type AppMode } from '@/store/mode-store';
-import { modeAccents, timings, useTheme } from '@/theme';
+import { floatingSurface, modeAccents, timings, useTheme } from '@/theme';
 
 const INNER_PAD = 6;
 
@@ -281,11 +281,8 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
                 flex: 1,
                 height: theme.layout.tabBarHeight,
                 borderRadius: theme.radii.pill,
-                backgroundColor: theme.colors.surfaceElevated,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
               },
-              theme.elevation(3),
+              floatingSurface(theme.scheme),
             ]}>
             <GestureDetector gesture={gesture}>
               <Animated.View

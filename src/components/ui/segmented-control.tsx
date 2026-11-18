@@ -14,8 +14,8 @@ export type SegmentedControlProps<T extends string> = {
   value: T;
   onChange: (value: T) => void;
   size?: 'sm' | 'md';
-  /** `ghost` sits on a gradient with no filled track. */
-  variant?: 'solid' | 'ghost';
+  /** `ghost` is a quiet pill (time ranges). `underline` is text with a short accent bar. */
+  variant?: 'solid' | 'ghost' | 'underline';
   testID?: string;
 };
 
@@ -62,40 +62,48 @@ export function SegmentedControl<T extends string>({
 
   const height = size === 'sm' ? 34 : 40;
   const ghost = variant === 'ghost';
-  const trackBg = ghost ? 'transparent' : theme.colors.surfaceMuted;
+  const underline = variant === 'underline';
+  const trackBg = ghost || underline ? 'transparent' : theme.colors.surfaceMuted;
   const thumbBg = ghost
     ? theme.scheme === 'dark'
       ? 'rgba(255,255,255,0.12)'
-      : 'rgba(11,11,16,0.08)'
+      : 'rgba(255,255,255,0.70)'
     : theme.colors.surfaceElevated;
+  const idleColor = ghost || underline ? 'textTertiary' : 'textSecondary';
 
   return (
     <View
       testID={testID}
       accessibilityRole="tablist"
-      onLayout={onLayout}
-      style={{
-        flexDirection: 'row',
-        height,
-        padding: PAD,
-        borderRadius: theme.radii.pill,
-        backgroundColor: trackBg,
-      }}>
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          {
-            position: 'absolute',
-            top: PAD,
-            bottom: PAD,
-            left: PAD,
-            borderRadius: theme.radii.pill,
-            backgroundColor: thumbBg,
-          },
-          ghost ? null : theme.elevation(1),
-          thumbStyle,
-        ]}
-      />
+      onLayout={underline ? undefined : onLayout}
+      style={
+        underline
+          ? { flexDirection: 'row', alignItems: 'center' }
+          : {
+              flexDirection: 'row',
+              height,
+              padding: PAD,
+              borderRadius: theme.radii.pill,
+              backgroundColor: trackBg,
+            }
+      }>
+      {underline ? null : (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: 'absolute',
+              top: PAD,
+              bottom: PAD,
+              left: PAD,
+              borderRadius: theme.radii.pill,
+              backgroundColor: thumbBg,
+            },
+            ghost ? null : theme.elevation(1),
+            thumbStyle,
+          ]}
+        />
+      )}
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -111,10 +119,28 @@ export function SegmentedControl<T extends string>({
                 onChange(option.value);
               }
             }}
-            style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <AppText variant="label" color={selected ? 'text' : 'textSecondary'}>
+            style={
+              underline
+                ? { paddingHorizontal: 9, paddingTop: 5, paddingBottom: 7, alignItems: 'center' }
+                : { flex: 1, alignItems: 'center', justifyContent: 'center' }
+            }>
+            <AppText variant="label" color={selected ? 'text' : idleColor}>
               {option.label}
             </AppText>
+            {underline ? (
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left: 8,
+                  right: 8,
+                  bottom: 2,
+                  height: 2,
+                  borderRadius: 2,
+                  backgroundColor: selected ? theme.colors.accent : 'transparent',
+                }}
+              />
+            ) : null}
           </Pressable>
         );
       })}

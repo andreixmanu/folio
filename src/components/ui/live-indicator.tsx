@@ -10,15 +10,16 @@ import Animated, {
 
 import { easings, useTheme } from '@/theme';
 
-import { AppText } from './text';
-
 export type LiveStatus = 'loading' | 'live' | 'stale' | 'error';
 
 function clock(ms: number): string {
   return new Date(ms).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-/** Small status pill: a softly pulsing dot while prices are live, plus the last update time. */
+/**
+ * Discreet price-status dot (~6px). The old "Live · time" pill is gone.
+ * The accessibility label still carries the status and the update time.
+ */
 export function LiveIndicator({
   status,
   updatedAt,
@@ -62,20 +63,11 @@ export function LiveIndicator({
   return (
     <View
       testID="live-indicator"
+      accessible
+      accessibilityRole="text"
       accessibilityLabel={`${label}${status === 'live' ? `, prezzi ${source}` : ''}`}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: theme.radii.pill,
-        backgroundColor: theme.colors.surfaceMuted,
-      }}>
+      style={{ width: 6, height: 6, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }, dotStyle]} />
-      <AppText variant="micro" color="textSecondary" tabular>
-        {label}
-      </AppText>
     </View>
   );
 }

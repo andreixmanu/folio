@@ -1,7 +1,7 @@
 /**
- * Color tokens. Dark is the primary theme; light is provided as an optional variant.
- * Inspired by Revolut: deep neutral background, layered "island" surfaces,
- * a vivid accent and clear positive/negative semantics.
+ * Color tokens. Dark is the primary theme; light is an optional variant.
+ * The canvas is one continuous surface (Seamless): deep neutral in the dark,
+ * a cool lavender in the light, with hairline dividers instead of floating cards.
  */
 export type ColorTokens = {
   /** App canvas behind every island. */
@@ -109,7 +109,7 @@ export const darkColors: ColorTokens = {
   surface: '#141419',
   surfaceElevated: '#1D1D24',
   surfaceMuted: '#24242D',
-  border: 'rgba(255,255,255,0.06)',
+  border: 'rgba(255,255,255,0.08)',
   text: '#FFFFFF',
   textSecondary: '#9A9AA8',
   textTertiary: '#5E5E6B',
@@ -130,14 +130,14 @@ export const darkColors: ColorTokens = {
 };
 
 export const lightColors: ColorTokens = {
-  background: '#F2F2F7',
+  background: '#ECEAF3',
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
-  surfaceMuted: '#EDEDF2',
-  border: 'rgba(0,0,0,0.05)',
+  surfaceMuted: 'rgba(255,255,255,0.72)',
+  border: 'rgba(20,16,40,0.08)',
   text: '#0B0B10',
   textSecondary: '#6B6B78',
-  textTertiary: '#A3A3AE',
+  textTertiary: '#8B8B97',
   accent: modeAccents.light.invest.accent,
   accentMuted: modeAccents.light.invest.accentMuted,
   onAccent: modeAccents.light.invest.onAccent,

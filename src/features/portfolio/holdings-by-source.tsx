@@ -6,7 +6,6 @@ import {
   AssetAvatar,
   ChangeChip,
   IconBadge,
-  IslandCard,
   ListRow,
   PressableScale,
   RowSeparator,
@@ -19,8 +18,8 @@ import { useTheme } from '@/theme';
 import { SOURCE_COLORS, SOURCE_ICONS } from './source-meta';
 
 /**
- * All holdings in a single island, grouped by source. Each group header doubles as the
- * per-source summary (name, account detail, subtotal and weight).
+ * Holdings on the canvas, grouped by source. Groups are separated by space.
+ * Holding rows use a hairline, not a card. Source headers are plain rows.
  */
 export function HoldingsBySource({
   snapshot,
@@ -43,8 +42,8 @@ export function HoldingsBySource({
     .filter((g) => g.holdings.length > 0);
 
   return (
-    <IslandCard index={2} padding="lg" testID="holdings">
-      <AppText variant="headline" style={{ marginBottom: theme.spacing.xs }}>
+    <View testID="holdings">
+      <AppText variant="headline" style={{ marginBottom: theme.spacing.sm }}>
         Posizioni
       </AppText>
       {groups.map(({ source, holdings, subtotal }, gi) => (
@@ -53,34 +52,33 @@ export function HoldingsBySource({
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              gap: theme.spacing.sm,
-              marginTop: gi === 0 ? theme.spacing.xs : theme.spacing.md,
-              paddingVertical: 6,
-              paddingHorizontal: theme.spacing.sm,
-              borderRadius: theme.radii.sm,
-              backgroundColor: theme.colors.surfaceMuted,
+              gap: 10,
+              marginTop: gi === 0 ? 2 : 18,
+              paddingTop: 4,
+              paddingBottom: 8,
+              minHeight: 62,
             }}>
-            <IconBadge icon={SOURCE_ICONS[source.kind]} color={SOURCE_COLORS[source.id]} size={26} />
+            <IconBadge icon={SOURCE_ICONS[source.kind]} color={SOURCE_COLORS[source.id]} size={34} />
             <View style={{ flex: 1 }}>
-              <AppText variant="label" numberOfLines={1}>
+              <AppText variant="bodyStrong" numberOfLines={1}>
                 {source.name}
               </AppText>
-              <AppText variant="micro" color="textTertiary" numberOfLines={1}>
+              <AppText variant="caption" color="textSecondary" numberOfLines={1}>
                 {source.detail}
               </AppText>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <AppText variant="label" tabular>
+              <AppText variant="bodyStrong" tabular>
                 {masked ? MASK : formatMoney(subtotal, 'EUR', { fractionDigits: 0 })}
               </AppText>
-              <AppText variant="micro" color="textTertiary" tabular>
+              <AppText variant="caption" color="textSecondary" tabular>
                 {formatPercent((subtotal / snapshot.totalValue) * 100, { signed: false })}
               </AppText>
             </View>
           </View>
-          {holdings.map((h, i) => (
+          {holdings.map((h) => (
             <Fragment key={h.id}>
-              {i > 0 ? <RowSeparator /> : null}
+              <RowSeparator inset={0} />
               <ListRow
                 leading={<AssetAvatar symbol={h.symbol} assetClass={h.assetClass} />}
                 title={h.name}
@@ -107,6 +105,6 @@ export function HoldingsBySource({
           </AppText>
         </PressableScale>
       ) : null}
-    </IslandCard>
+    </View>
   );
 }

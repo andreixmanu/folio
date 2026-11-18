@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, SectionList, TextInput, View } from 'react-native';
+import { RefreshControl, ScrollView, SectionList, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
+  AmbientBackground,
   AppText,
   ErrorState,
   Icon,
@@ -144,8 +145,17 @@ export default function TransactionsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }} testID="budget-transactions-screen">
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <AmbientBackground />
+      </View>
       <SectionList<Transaction, MovementSection>
-        style={{ flex: 1, width: '100%', maxWidth: theme.layout.maxContentWidth, alignSelf: 'center' }}
+        style={{
+          flex: 1,
+          width: '100%',
+          maxWidth: theme.layout.maxContentWidth,
+          alignSelf: 'center',
+          backgroundColor: 'transparent',
+        }}
         sections={transactions == null ? [] : sections}
         keyExtractor={(item) => item.id}
         stickySectionHeadersEnabled={false}
@@ -183,7 +193,7 @@ export default function TransactionsScreen() {
                 height: 40,
                 paddingHorizontal: theme.spacing.md,
                 borderRadius: theme.radii.pill,
-                backgroundColor: theme.colors.surface,
+                backgroundColor: theme.scheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.72)',
                 borderWidth: 1,
                 borderColor: theme.colors.border,
               }}>
@@ -267,8 +277,7 @@ export default function TransactionsScreen() {
               justifyContent: 'space-between',
               paddingTop: theme.spacing.md,
               paddingBottom: theme.spacing.sm,
-              paddingHorizontal: theme.spacing.xs,
-              backgroundColor: theme.colors.background,
+              backgroundColor: 'transparent',
             }}>
             <AppText variant="label" color="textSecondary">
               {section.label}
@@ -276,37 +285,18 @@ export default function TransactionsScreen() {
             <MoneyText amount={section.net} variant="label" masked={masked} />
           </View>
         )}
-        renderItem={({ item, index, section }) => {
-          const first = index === 0;
-          const last = index === section.data.length - 1;
-          return (
-            <View
-              style={{
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderLeftWidth: 1,
-                borderRightWidth: 1,
-                borderTopWidth: first ? 1 : 0,
-                borderBottomWidth: last ? 1 : 0,
-                borderTopLeftRadius: first ? theme.radii.xl : 0,
-                borderTopRightRadius: first ? theme.radii.xl : 0,
-                borderBottomLeftRadius: last ? theme.radii.xl : 0,
-                borderBottomRightRadius: last ? theme.radii.xl : 0,
-                borderCurve: 'continuous',
-                paddingHorizontal: theme.spacing.lg,
-                marginBottom: last ? theme.spacing.xs : 0,
-              }}>
-              {index > 0 ? <RowSeparator /> : null}
-              <TransactionRow
-                tx={item}
-                today={today}
-                masked={masked}
-                onPress={() => router.push(`/transaction/${item.id}`)}
-                testID={`tx-${item.id}`}
-              />
-            </View>
-          );
-        }}
+        renderItem={({ item, index }) => (
+          <View>
+            {index > 0 ? <RowSeparator inset={0} /> : null}
+            <TransactionRow
+              tx={item}
+              today={today}
+              masked={masked}
+              onPress={() => router.push(`/transaction/${item.id}`)}
+              testID={`tx-${item.id}`}
+            />
+          </View>
+        )}
         ListEmptyComponent={
           transactions == null ? (
             transactionsQuery.isError ? (

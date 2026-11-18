@@ -1,15 +1,7 @@
 import { Eye, EyeOff } from '@/components/ui/icons';
 import { View } from 'react-native';
 
-import {
-  ErrorState,
-  IconButton,
-  IslandCard,
-  ProfileAvatar,
-  Screen,
-  ScreenHeader,
-  Skeleton,
-} from '@/components/ui';
+import { ErrorState, IconButton, Screen, ScreenHeader, Skeleton } from '@/components/ui';
 import { AllocationCard } from '@/features/portfolio/allocation-card';
 import { HoldingsBySource } from '@/features/portfolio/holdings-by-source';
 import { PortfolioHero } from '@/features/portfolio/portfolio-hero';
@@ -32,9 +24,7 @@ function LoadingState() {
         <Skeleton height={148} radius={theme.radii.lg} />
         <Skeleton height={34} radius={theme.radii.pill} />
       </View>
-      <IslandCard>
-        <Skeleton height={120} radius={theme.radii.lg} />
-      </IslandCard>
+      <Skeleton height={120} radius={theme.radii.lg} />
     </View>
   );
 }
@@ -47,7 +37,6 @@ export default function PortfolioScreen() {
   return (
     <Screen
       testID="portfolio-screen"
-      glow
       refreshing={portfolio.isRefetching}
       onRefresh={() => void portfolio.refetch()}>
       <ScreenHeader
@@ -59,7 +48,6 @@ export default function PortfolioScreen() {
               accessibilityLabel={hideBalances ? 'Mostra saldi' : 'Nascondi saldi'}
               onPress={toggleHideBalances}
             />
-            <ProfileAvatar initials="AM" />
           </>
         }
       />

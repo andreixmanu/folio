@@ -53,7 +53,9 @@ export function AccountStrip({
               paddingVertical: theme.spacing.sm,
               paddingHorizontal: theme.spacing.md,
               borderRadius: theme.radii.md,
-              backgroundColor: theme.colors.surfaceMuted,
+              backgroundColor: theme.scheme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.45)',
+              borderWidth: 1,
+              borderColor: theme.colors.border,
             }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
               <IconBadge icon={KIND_ICON[account.kind]} color={theme.colors.accent} size={28} />

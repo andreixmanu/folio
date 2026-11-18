@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Platform, View, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { enterFade, useTheme } from '@/theme';
+import { enterFade, iconButtonChrome, useTheme } from '@/theme';
 
 import { Icon } from './icon';
 import { PressableScale } from './pressable-scale';
@@ -78,6 +78,7 @@ export function IconButton({
   disabled?: boolean;
 }) {
   const theme = useTheme();
+  const chrome = iconButtonChrome(theme.scheme);
   return (
     <PressableScale
       onPress={onPress}
@@ -91,34 +92,15 @@ export function IconButton({
         width: 36,
         height: 36,
         borderRadius: 18,
+        overflow: 'hidden',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: theme.colors.surface,
+        backgroundColor: chrome.backgroundColor,
         borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderColor: chrome.borderColor,
         opacity: disabled ? 0.4 : 1,
       }}>
       <Icon icon={icon} size={18} color={theme.colors.text} />
     </PressableScale>
-  );
-}
-
-/** Initials avatar used in headers. */
-export function ProfileAvatar({ initials }: { initials: string }) {
-  const theme = useTheme();
-  return (
-    <View
-      style={{
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.colors.accentMuted,
-      }}>
-      <AppText variant="label" color="accent">
-        {initials}
-      </AppText>
-    </View>
   );
 }

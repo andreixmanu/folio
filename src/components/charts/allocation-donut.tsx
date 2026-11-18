@@ -17,7 +17,7 @@ export type AllocationDonutProps = {
 };
 
 /** Compact donut with a tappable legend; the center shows the selected slice. */
-export function AllocationDonut({ slices, masked = false, radius = 56 }: AllocationDonutProps) {
+export function AllocationDonut({ slices, masked = false, radius = 59 }: AllocationDonutProps) {
   const theme = useTheme();
   const [selected, setSelected] = useState(0);
   const current = slices[Math.min(selected, slices.length - 1)];
@@ -35,7 +35,7 @@ export function AllocationDonut({ slices, masked = false, radius = 56 }: Allocat
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: theme.spacing.md,
+        gap: theme.spacing.lg,
       }}>
       <Animated.View entering={enterFade()}>
         <PieChart
@@ -43,9 +43,9 @@ export function AllocationDonut({ slices, masked = false, radius = 56 }: Allocat
           donut
           radius={radius}
           innerRadius={radius * 0.74}
-          innerCircleColor={theme.colors.surface}
+          innerCircleColor={theme.colors.background}
           strokeWidth={2}
-          strokeColor={theme.colors.surface}
+          strokeColor={theme.colors.background}
           focusOnPress
           sectionAutoFocus
           extraRadius={3}
@@ -63,7 +63,7 @@ export function AllocationDonut({ slices, masked = false, radius = 56 }: Allocat
           }
         />
       </Animated.View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, gap: 0 }}>
         {slices.map((s, i) => (
           <PressableScale
             key={s.key}
@@ -72,18 +72,18 @@ export function AllocationDonut({ slices, masked = false, radius = 56 }: Allocat
             accessibilityLabel={`${s.label} ${formatPercent(s.percent, { signed: false })}`}
             style={{
               flexDirection: 'row',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               gap: theme.spacing.sm,
-              paddingVertical: 3,
-              paddingHorizontal: theme.spacing.sm,
-              borderRadius: theme.radii.xs,
-              backgroundColor: i === selected ? theme.colors.surfaceMuted : 'transparent',
+              paddingVertical: 8,
+              borderBottomWidth: i < slices.length - 1 ? 1 : 0,
+              borderBottomColor: theme.colors.border,
             }}>
             <View
               style={{
                 width: 8,
                 height: 8,
                 borderRadius: 4,
+                marginTop: 5,
                 backgroundColor: s.color,
               }}
             />
@@ -100,14 +100,17 @@ export function AllocationDonut({ slices, masked = false, radius = 56 }: Allocat
               />
             ) : null}
             <View style={{ flex: 1 }}>
-              <AppText variant="caption" numberOfLines={1}>
+              <AppText variant="bodyStrong" numberOfLines={1} style={{ fontSize: 14, lineHeight: 18 }}>
                 {s.label}
               </AppText>
-              <AppText variant="micro" color="textTertiary" tabular>
+              <AppText variant="caption" color="textSecondary" tabular>
                 {masked ? MASK : formatMoney(s.value, 'EUR', { fractionDigits: 0 })}
               </AppText>
             </View>
-            <AppText variant="label" tabular style={{ minWidth: 48, textAlign: 'right' }}>
+            <AppText
+              variant="label"
+              tabular
+              style={{ minWidth: 48, textAlign: 'right', fontSize: 13, lineHeight: 18, letterSpacing: -0.1 }}>
               {formatPercent(s.percent, { signed: false })}
             </AppText>
           </PressableScale>

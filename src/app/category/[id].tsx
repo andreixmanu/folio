@@ -5,9 +5,8 @@ import { View } from 'react-native';
 import {
   AppText,
   ErrorState,
-  Icon,
+  IconButton,
   IslandCard,
-  PressableScale,
   RowSeparator,
   Screen,
   SectionTitle,
@@ -57,25 +56,7 @@ function goBack() {
 }
 
 function BackHeader() {
-  const theme = useTheme();
-  return (
-    <PressableScale
-      haptic="selection"
-      onPress={goBack}
-      accessibilityLabel="Indietro"
-      style={{
-        width: 36,
-        height: 36,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: theme.radii.pill,
-        backgroundColor: theme.colors.surface,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-      }}>
-      <Icon icon={ChevronLeft} size={22} color={theme.colors.text} />
-    </PressableScale>
-  );
+  return <IconButton icon={ChevronLeft} accessibilityLabel="Indietro" onPress={goBack} />;
 }
 
 function DetailSkeleton() {

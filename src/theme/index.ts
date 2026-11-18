@@ -1,3 +1,4 @@
+export * from './chrome';
 export * from './colors';
 export * from './elevation';
 export * from './motion';
