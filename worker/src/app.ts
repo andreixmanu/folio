@@ -134,6 +134,27 @@ export function createApp(deps: AppDeps = {}) {
     });
   });
 
+  const legalPage = (title: string, body: string) =>
+    `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Folio · ${title}</title><style>body{font-family:system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 20px;line-height:1.6;color:#222}</style></head><body><h1>Folio · ${title}</h1>${body}</body></html>`;
+
+  /** Public legal pages required by the open-banking provider registration. */
+  app.get('/privacy', (c) =>
+    c.html(
+      legalPage(
+        'Privacy',
+        '<p>Folio è un\'app personale usata esclusivamente dal suo proprietario, Andrei Manu, per consultare i propri conti e investimenti.</p><p>I dati bancari ottenuti tramite open banking (conti, saldi, transazioni) vengono letti solo con il consenso esplicito del titolare, conservati su infrastruttura Cloudflare a lui riservata e non vengono condivisi, venduti o ceduti a terzi.</p><p>Il consenso può essere revocato in qualsiasi momento dalla propria banca o dal provider di open banking. Contatto: andreixmanu@proton.me</p>',
+      ),
+    ),
+  );
+  app.get('/terms', (c) =>
+    c.html(
+      legalPage(
+        'Termini',
+        '<p>Folio è un\'applicazione privata e non commerciale, destinata al solo uso personale del suo proprietario. Non offre servizi a terzi.</p><p>L\'accesso ai dati bancari è in sola lettura e avviene solo previo consenso del titolare. Nessuna operazione di pagamento viene eseguita.</p><p>Il software è fornito così com\'è, senza garanzie. Contatto: andreixmanu@proton.me</p>',
+      ),
+    ),
+  );
+
   /** GET /history?symbols=BTC,ETH&range=1M */
   app.get("/history", async (c) => {
     const range = parseRange(c.req.query("range") ?? "1M");
