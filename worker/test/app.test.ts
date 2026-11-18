@@ -61,3 +61,44 @@ describe('worker app', () => {
     expect(await res.json()).toEqual({ error: 'Kraken: EService:Unavailable' });
   });
 });
+
+describe('GET /history KV fallback', () => {
+  function memKv() {
+    const m = new Map<string, string>();
+    return {
+      get: async (k: string) => m.get(k) ?? null,
+      put: async (k: string, v: string) => void m.set(k, v),
+    } as unknown as KVNamespace;
+  }
+
+  test('serves the last good KV copy when Kraken rate-limits', async () => {
+    let t = NOW;
+    let limited = false;
+    const fetchJson = vi.fn(async () => {
+      if (limited) return { error: ['EGeneral:Too many requests'] };
+      const s = NOW / 1000;
+      return { error: [], result: { XXBTZEUR: [candle(s - 7200, '1'), candle(s - 3600, '2')], last: s } };
+    });
+    const env = { XAI_AUTH: memKv() };
+    const ok = await createApp({ fetchJson, now: () => t, sleep: async () => {} }).request('/history?symbols=BTC&range=1D', {}, env);
+    expect(ok.status).toBe(200);
+
+    limited = true;
+    t = NOW + 10 * 60_000; // past the 1D TTL, fresh isolate
+    const res = await createApp({ fetchJson, now: () => t, sleep: async () => {} }).request('/history?symbols=BTC&range=1D', {}, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { series: { points: unknown[] }[] };
+    expect(body.series[0]?.points.length).toBeGreaterThan(0);
+    expect(fetchJson).toHaveBeenCalledTimes(4); // 1 ok + 3 rate-limited attempts
+  });
+
+  test('still 502 when Kraken fails and nothing is stored', async () => {
+    const fetchJson = vi.fn(async () => ({ error: ['EGeneral:Too many requests'] }));
+    const res = await createApp({ fetchJson, now: () => NOW, sleep: async () => {} }).request(
+      '/history?symbols=BTC&range=1D',
+      {},
+      { XAI_AUTH: memKv() },
+    );
+    expect(res.status).toBeGreaterThanOrEqual(500);
+  });
+});
