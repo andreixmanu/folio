@@ -1,4 +1,11 @@
-import { formatMoney, formatPercent, formatQuantity, formatRelativeTime, formatRelativeTimeIt } from '@/lib/format';
+import {
+  formatMoney,
+  formatMoneyParts,
+  formatPercent,
+  formatQuantity,
+  formatRelativeTime,
+  formatRelativeTimeIt,
+} from '@/lib/format';
 
 // Intl output uses non-breaking spaces before the currency symbol.
 const normalize = (s: string) => s.replace(/\u00a0|\u202f/g, ' ');
@@ -9,6 +16,23 @@ describe('format', () => {
     expect(normalize(formatMoney(9501.8))).toBe('9.501,80 €');
     expect(normalize(formatMoney(-12.5))).toBe('−12,50 €');
     expect(normalize(formatMoney(12.5, 'EUR', { signed: true }))).toBe('+12,50 €');
+  });
+
+  test('formatMoneyParts splits integer, fraction and currency', () => {
+    const parts = formatMoneyParts(161757.44);
+    expect(parts.sign).toBe('');
+    expect(parts.integer).toBe('161.757');
+    expect(parts.fraction).toBe(',44');
+    expect(parts.currency).toBe('€');
+    expect(normalize(parts.formatted)).toBe('161.757,44 €');
+
+    const negative = formatMoneyParts(-12.5);
+    expect(negative.sign).toBe('−');
+    expect(negative.integer).toBe('12');
+    expect(negative.fraction).toBe(',50');
+
+    const signed = formatMoneyParts(12.5, 'EUR', { signed: true });
+    expect(signed.sign).toBe('+');
   });
 
   test('formatPercent signs values', () => {

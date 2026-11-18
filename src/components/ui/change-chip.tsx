@@ -1,5 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, Minus } from './icons';
-import { View } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { formatMoney, formatPercent, MASK } from '@/lib/format';
 import { useTheme } from '@/theme';
@@ -23,6 +23,7 @@ export type ChangeChipProps = {
    * `spend`: an increase is negative (more money left the account).
    */
   tone?: 'delta' | 'spend';
+  style?: StyleProp<ViewStyle>;
   testID?: string;
 };
 
@@ -35,6 +36,7 @@ export function ChangeChip({
   masked = false,
   variant = 'filled',
   tone = 'delta',
+  style,
   testID,
 }: ChangeChipProps) {
   const theme = useTheme();
@@ -88,6 +90,7 @@ export function ChangeChip({
           paddingHorizontal: size === 'sm' ? 6 : 10,
           paddingVertical: size === 'sm' ? 2 : 5,
         },
+        style,
       ]}>
       <Icon icon={icon} size={iconSize} color={theme.colors[fg]} />
       <AppText variant={size === 'sm' ? 'micro' : 'label'} color={fg} tabular>

@@ -74,6 +74,7 @@ describe('budget overview', () => {
     await renderWithProviders(<OverviewScreen />);
 
     expect(screen.getByTestId('budget-overview-screen')).toBeTruthy();
+    expect(screen.getByTestId('hero-glow')).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Panoramica' })).toBeTruthy();
     expect(screen.queryByTestId('mode-switch')).toBeNull();
 

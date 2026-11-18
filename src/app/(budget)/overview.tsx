@@ -21,7 +21,7 @@ import {
   recentTransactions,
   topCategoryShares,
 } from '@/features/budget/analytics';
-import { AccountStrip, CategorySpendRow, RecurringPaymentRow, TransactionRow } from '@/features/budget/components';
+import { BudgetHero, CategorySpendRow, RecurringPaymentRow, TransactionRow } from '@/features/budget/components';
 import { toISODate } from '@/features/budget/dates';
 import { useAccounts, useCategorizedTransactions, useRecurring } from '@/features/budget/hooks';
 import { sumAmounts } from '@/features/budget/model';
@@ -38,13 +38,16 @@ function LoadingState() {
   const theme = useTheme();
   return (
     <View style={{ gap: theme.spacing.md }} testID="budget-overview-loading">
-      <IslandCard>
-        <View style={{ gap: theme.spacing.md }}>
-          <Skeleton width={110} height={14} />
-          <Skeleton width={220} height={40} radius={12} />
-          <Skeleton height={64} radius={theme.radii.md} />
-        </View>
-      </IslandCard>
+      <View
+        style={{
+          alignItems: 'center',
+          paddingTop: theme.spacing.xl,
+          gap: theme.spacing.md,
+        }}>
+        <Skeleton width={220} height={48} radius={14} />
+        <Skeleton width={88} height={14} radius={6} />
+        <Skeleton height={64} radius={theme.radii.md} />
+      </View>
       <IslandCard>
         <View style={{ gap: theme.spacing.md }}>
           <Skeleton width={140} height={14} />
@@ -100,6 +103,7 @@ export default function OverviewScreen() {
   return (
     <Screen
       testID="budget-overview-screen"
+      glow
       refreshing={refreshing}
       onRefresh={retry}>
       <ScreenHeader title="Panoramica" />
@@ -116,21 +120,7 @@ export default function OverviewScreen() {
         )
       ) : (
         <>
-          <IslandCard index={0} padding="lg" elevated={2} testID="budget-balance">
-            <View style={{ gap: theme.spacing.sm }}>
-              <AppText variant="caption" color="textSecondary">
-                Saldo totale
-              </AppText>
-              <AnimatedNumber
-                value={total}
-                format={(value) => formatMoney(value)}
-                variant="display"
-                masked={masked}
-                testID="budget-total"
-              />
-              <AccountStrip accounts={accounts} masked={masked} />
-            </View>
-          </IslandCard>
+          <BudgetHero total={total} accounts={accounts} masked={masked} />
 
           {!transactions || !comparison || !cumulative ? (
             transactionsQuery.isError ? (

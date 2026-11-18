@@ -10,11 +10,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/theme';
 
+import { HeroGlow } from './hero-glow';
+
 export type ScreenProps = {
   children: ReactNode;
   refreshing?: boolean;
   onRefresh?: () => void;
   testID?: string;
+  /** Soft mode-accent glow behind the top of the screen (wallet-home style). */
+  glow?: boolean;
 };
 
 /**
@@ -23,7 +27,7 @@ export type ScreenProps = {
  * - a scrim fades in behind the status bar once you scroll;
  * - bottom padding clears the floating tab bar and the gesture/navigation bar.
  */
-export function Screen({ children, refreshing = false, onRefresh, testID }: ScreenProps) {
+export function Screen({ children, refreshing = false, onRefresh, testID, glow = false }: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
@@ -36,11 +40,22 @@ export function Screen({ children, refreshing = false, onRefresh, testID }: Scre
     opacity: interpolate(scrollY.get(), [0, 24], [0, 1], 'clamp'),
   }));
 
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.get(), [0, 220], [1, 0], 'clamp'),
+  }));
+
   const bottomPadding =
     theme.layout.tabBarHeight + theme.layout.tabBarBottomGap + insets.bottom + theme.spacing.lg;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }} testID={testID}>
+      {glow ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[{ position: 'absolute', top: 0, left: 0, right: 0 }, glowStyle]}>
+          <HeroGlow />
+        </Animated.View>
+      ) : null}
       <Animated.ScrollView
         testID="screen-scroll"
         onScroll={onScroll}

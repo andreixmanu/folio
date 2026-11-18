@@ -3,12 +3,16 @@ import { ChartPie, Eye } from '@/components/ui/icons';
 
 import { TabIcon } from '@/components/navigation/tab-icon';
 import { ChangeChip } from '@/components/ui/change-chip';
+import { HeroBalance } from '@/components/ui/hero-balance';
 import { Icon } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/screen-header';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { TIME_RANGES } from '@/services/types';
+import { useUiStore } from '@/store/ui-store';
 
 import { renderWithProviders } from '../test/test-utils';
+
+const normalize = (s: string) => s.replace(/\u00a0|\u202f/g, ' ');
 
 describe('<ChangeChip />', () => {
   test('shows a positive change with amount and percent', async () => {
@@ -25,6 +29,28 @@ describe('<ChangeChip />', () => {
   test('spend tone treats an increase as negative', async () => {
     await renderWithProviders(<ChangeChip tone="spend" percent={12} amount={30} testID="chip" />);
     expect(screen.getByTestId('chip').props.accessibilityLabel).toMatch(/^Spesa in aumento \+30,00\s€ · 12%$/);
+  });
+});
+
+describe('<HeroBalance />', () => {
+  test('renders a large integer with smaller decimals and the currency next to it', async () => {
+    await renderWithProviders(<HeroBalance value={319.74} from={319.74} testID="total" />);
+    expect(normalize(String(screen.getByTestId('total').props.accessibilityLabel))).toBe('319,74 €');
+    expect(screen.getByText('319')).toBeTruthy();
+    expect(screen.getByText(',74')).toBeTruthy();
+    expect(screen.getByText('€')).toBeTruthy();
+  });
+
+  test('masks the amount in privacy mode', async () => {
+    await renderWithProviders(<HeroBalance value={319.74} masked testID="total" />);
+    expect(screen.getByTestId('total').props.accessibilityLabel).toBe('••••');
+    expect(screen.getByText('••••')).toBeTruthy();
+  });
+});
+
+describe('ui store', () => {
+  test('defaults the portfolio chart range to 1W', () => {
+    expect(useUiStore.getInitialState().timeRange).toBe('1W');
   });
 });
 

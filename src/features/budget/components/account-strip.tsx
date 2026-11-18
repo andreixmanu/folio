@@ -16,7 +16,16 @@ const KIND_ICON: Record<AccountKind, LucideIcon> = {
 };
 
 /** Compact horizontal account chips: name, bank, balance. */
-export function AccountStrip({ accounts, masked = false }: { accounts: readonly Account[]; masked?: boolean }) {
+export function AccountStrip({
+  accounts,
+  masked = false,
+  bleed = true,
+}: {
+  accounts: readonly Account[];
+  masked?: boolean;
+  /** Negative margin so chips can scroll to a parent island's edges. */
+  bleed?: boolean;
+}) {
   const theme = useTheme();
   return (
     <ScrollView
@@ -24,8 +33,11 @@ export function AccountStrip({ accounts, masked = false }: { accounts: readonly 
       nestedScrollEnabled
       directionalLockEnabled
       showsHorizontalScrollIndicator={false}
-      style={{ marginHorizontal: -theme.spacing.lg, flexGrow: 0 }}
-      contentContainerStyle={{ gap: theme.spacing.sm, paddingHorizontal: theme.spacing.lg }}
+      style={{ marginHorizontal: bleed ? -theme.spacing.lg : 0, flexGrow: 0, alignSelf: 'stretch' }}
+      contentContainerStyle={{
+        gap: theme.spacing.sm,
+        paddingHorizontal: bleed ? theme.spacing.lg : 0,
+      }}
       testID="budget-accounts">
       {accounts.map((account) => {
         const digits = account.iban?.replace(/[\s•]/g, '') ?? '';

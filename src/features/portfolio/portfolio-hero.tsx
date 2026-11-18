@@ -1,21 +1,20 @@
 import { View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { ValueChart } from '@/components/charts/value-chart';
 import {
-  AnimatedNumber,
   AppText,
   ChangeChip,
   ErrorState,
-  IslandCard,
+  HeroBalance,
   LiveIndicator,
   SegmentedControl,
   Skeleton,
 } from '@/components/ui';
-import { formatMoney } from '@/lib/format';
 import { useValueHistory, type PriceStatus } from '@/services/hooks';
 import { TIME_RANGES, type TimeRange } from '@/services/types';
 import { useUiStore } from '@/store/ui-store';
-import { useTheme } from '@/theme';
+import { enterFade, useTheme } from '@/theme';
 
 const RANGE_OPTIONS = TIME_RANGES.map((r) => ({ value: r, label: r === 'ALL' ? 'Tutto' : r }));
 
@@ -26,6 +25,8 @@ const RANGE_CAPTION: Record<TimeRange, string> = {
   '1Y': 'ultimo anno',
   ALL: 'dall’inizio',
 };
+
+const CHART_HEIGHT = 148;
 
 export function PortfolioHero({
   totalValue,
@@ -46,40 +47,50 @@ export function PortfolioHero({
   const changePct = history.data?.changePct ?? 0;
 
   return (
-    <IslandCard index={0} padding="lg" elevated={2} testID="portfolio-hero">
-      <View style={{ gap: theme.spacing.xs }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <AppText variant="caption" color="textSecondary">
-            Valore totale
-          </AppText>
-          <LiveIndicator status={status} updatedAt={pricesUpdatedAt} />
-        </View>
-        <AnimatedNumber
-          value={totalValue}
-          format={(v) => formatMoney(v)}
-          variant="display"
-          masked={masked}
-          testID="total-value"
-        />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-          <ChangeChip percent={changePct} amount={change} masked={masked} testID="total-change" />
+    <Animated.View
+      entering={enterFade()}
+      testID="portfolio-hero"
+      style={{
+        alignItems: 'center',
+        paddingTop: theme.spacing.xl,
+        paddingBottom: theme.spacing.sm,
+        gap: theme.spacing.md,
+      }}>
+      <HeroBalance value={totalValue} masked={masked} testID="total-value" />
+      <View style={{ alignItems: 'center', gap: theme.spacing.sm }}>
+        <LiveIndicator status={status} updatedAt={pricesUpdatedAt} />
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+            gap: theme.spacing.sm,
+          }}>
+          <ChangeChip
+            percent={changePct}
+            amount={change}
+            masked={masked}
+            testID="total-change"
+            style={{ alignSelf: 'center' }}
+          />
           <AppText variant="caption" color="textSecondary">
             {RANGE_CAPTION[range]}
           </AppText>
         </View>
       </View>
 
-      <View style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.md }}>
+      <View style={{ alignSelf: 'stretch', marginTop: theme.spacing.xs }}>
         {history.data ? (
           <ValueChart
             points={history.data.points}
             range={range}
             trend={change >= 0 ? 'up' : 'down'}
             masked={masked}
-            height={150}
+            height={CHART_HEIGHT}
           />
         ) : history.isError ? (
-          <View style={{ height: 150, justifyContent: 'center' }}>
+          <View style={{ height: CHART_HEIGHT, justifyContent: 'center' }}>
             <ErrorState
               compact
               title="Storico non disponibile"
@@ -88,17 +99,20 @@ export function PortfolioHero({
             />
           </View>
         ) : (
-          <Skeleton height={150} radius={theme.radii.lg} />
+          <Skeleton height={CHART_HEIGHT} radius={theme.radii.lg} />
         )}
       </View>
 
-      <SegmentedControl
-        options={RANGE_OPTIONS}
-        value={range}
-        onChange={setRange}
-        size="sm"
-        testID="range"
-      />
-    </IslandCard>
+      <View style={{ alignSelf: 'stretch' }}>
+        <SegmentedControl
+          options={RANGE_OPTIONS}
+          value={range}
+          onChange={setRange}
+          size="sm"
+          variant="ghost"
+          testID="range"
+        />
+      </View>
+    </Animated.View>
   );
 }

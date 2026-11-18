@@ -44,6 +44,22 @@ type ModeAccent = {
 
 export type AccentMode = 'invest' | 'budget';
 
+/** `#RRGGBB` (or `#RGB`) to `rgba()` for glows and overlays. */
+export function rgbaFromHex(hex: string, alpha: number): string {
+  const raw = hex.replace('#', '');
+  const full =
+    raw.length === 3
+      ? raw
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : raw;
+  const r = Number.parseInt(full.slice(0, 2), 16);
+  const g = Number.parseInt(full.slice(2, 4), 16);
+  const b = Number.parseInt(full.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 /**
  * Per-mode accent. Invest keeps the original violet.
  * Budget teal is light, so `onAccent` is deep green ink (white fails contrast).

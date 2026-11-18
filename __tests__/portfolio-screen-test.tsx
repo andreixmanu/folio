@@ -5,6 +5,7 @@ import { HoldingsBySource } from '@/features/portfolio/holdings-by-source';
 import { buildSnapshot } from '@/services/portfolio';
 import { priceSources, TANGEM_SOURCE } from '@/services/sources';
 import { fetchIbkrPositions } from '@/services/ibkr';
+import { useUiStore } from '@/store/ui-store';
 import { fetchWallets, type WalletsResponse } from '@/services/wallets';
 
 import { FIXTURE_IBKR_POSITIONS, FIXTURE_STOCK_QUOTES, IBKR_FIXTURE, IBKR_SOURCE } from '../test/fixtures/ibkr';
@@ -97,6 +98,19 @@ describe('PortfolioScreen wallets', () => {
     fetchIbkrMock.mockReset();
     fetchIbkrMock.mockResolvedValue(IBKR_FIXTURE);
     getQuotesMock.mockClear();
+    useUiStore.setState({ timeRange: '1W', hideBalances: false });
+  });
+
+  test('renders the Tangem-style glow hero with the 1W range selected', async () => {
+    fetchWalletsMock.mockResolvedValue(walletsOk);
+    const { unmount } = await renderWithProviders(<PortfolioScreen />);
+    await waitFor(() => expect(screen.getByTestId('total-value')).toBeTruthy());
+    expect(screen.getByTestId('hero-glow')).toBeTruthy();
+    expect(screen.getByTestId('portfolio-hero')).toBeTruthy();
+    expect(screen.getByTestId('value-chart')).toBeTruthy();
+    expect(screen.getByTestId('range-1W').props.accessibilityState).toEqual({ selected: true });
+    expect(screen.getByText('Tutto')).toBeTruthy();
+    unmount();
   });
 
   test('shows stocks and an inline note when /wallets fails', async () => {

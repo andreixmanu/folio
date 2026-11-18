@@ -12,6 +12,10 @@ export const fonts = {
 type Variant = Pick<TextStyle, 'fontFamily' | 'fontSize' | 'lineHeight' | 'letterSpacing'>;
 
 export const typography = {
+  /** Wallet-home total: integer digits. Fraction and currency use `heroFraction`. */
+  hero: { fontFamily: fonts.extrabold, fontSize: 46, lineHeight: 52, letterSpacing: -1.8 },
+  /** Smaller decimals and currency sitting on the baseline of `hero`. */
+  heroFraction: { fontFamily: fonts.bold, fontSize: 26, lineHeight: 34, letterSpacing: -0.6 },
   /** Hero numbers such as the portfolio total. */
   display: { fontFamily: fonts.bold, fontSize: 36, lineHeight: 42, letterSpacing: -1 },
   /** Large screen titles. */

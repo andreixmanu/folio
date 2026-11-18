@@ -14,6 +14,8 @@ export type SegmentedControlProps<T extends string> = {
   value: T;
   onChange: (value: T) => void;
   size?: 'sm' | 'md';
+  /** `ghost` sits on a gradient with no filled track. */
+  variant?: 'solid' | 'ghost';
   testID?: string;
 };
 
@@ -25,6 +27,7 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   size = 'md',
+  variant = 'solid',
   testID,
 }: SegmentedControlProps<T>) {
   const theme = useTheme();
@@ -58,6 +61,13 @@ export function SegmentedControl<T extends string>({
   }));
 
   const height = size === 'sm' ? 34 : 40;
+  const ghost = variant === 'ghost';
+  const trackBg = ghost ? 'transparent' : theme.colors.surfaceMuted;
+  const thumbBg = ghost
+    ? theme.scheme === 'dark'
+      ? 'rgba(255,255,255,0.12)'
+      : 'rgba(11,11,16,0.08)'
+    : theme.colors.surfaceElevated;
 
   return (
     <View
@@ -69,7 +79,7 @@ export function SegmentedControl<T extends string>({
         height,
         padding: PAD,
         borderRadius: theme.radii.pill,
-        backgroundColor: theme.colors.surfaceMuted,
+        backgroundColor: trackBg,
       }}>
       <Animated.View
         pointerEvents="none"
@@ -80,9 +90,9 @@ export function SegmentedControl<T extends string>({
             bottom: PAD,
             left: PAD,
             borderRadius: theme.radii.pill,
-            backgroundColor: theme.colors.surfaceElevated,
+            backgroundColor: thumbBg,
           },
-          theme.elevation(1),
+          ghost ? null : theme.elevation(1),
           thumbStyle,
         ]}
       />

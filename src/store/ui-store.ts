@@ -21,7 +21,7 @@ type UiState = {
 
 /** Local, non-persisted UI state. Persistence (AsyncStorage/MMKV) can be added later. */
 export const useUiStore = create<UiState>()((set) => ({
-  timeRange: '1M',
+  timeRange: '1W',
   allocationMode: 'class',
   newsFilter: 'all',
   hideBalances: false,

@@ -24,16 +24,68 @@ function currencyFormatter(currency: string, fractionDigits: number): Intl.Numbe
 
 export const MASK = '••••';
 
+export type MoneyFormatOptions = { fractionDigits?: number; signed?: boolean };
+
+export type MoneyParts = {
+  /** `−` / `+` / empty. Uses the same minus as `formatMoney`. */
+  sign: string;
+  /** Integer with grouping, e.g. `161.757`. */
+  integer: string;
+  /** Decimal separator plus fraction digits, e.g. `,44`. */
+  fraction: string;
+  /** Currency symbol, e.g. `€`. */
+  currency: string;
+  /** Full `formatMoney` string, for accessibility. */
+  formatted: string;
+};
+
 /** Formats an amount of money, e.g. `128.430,12 €`. */
 export function formatMoney(
   value: number,
   currency = 'EUR',
-  { fractionDigits = 2, signed = false }: { fractionDigits?: number; signed?: boolean } = {},
+  { fractionDigits = 2, signed = false }: MoneyFormatOptions = {},
 ): string {
   const formatted = currencyFormatter(currency, fractionDigits).format(Math.abs(value));
   if (value < 0) return `−${formatted}`;
   if (signed && value > 0) return `+${formatted}`;
   return formatted;
+}
+
+/** Splits a formatted amount so the integer can render larger than the decimals and currency. */
+export function formatMoneyParts(
+  value: number,
+  currency = 'EUR',
+  { fractionDigits = 2, signed = false }: MoneyFormatOptions = {},
+): MoneyParts {
+  const parts = currencyFormatter(currency, fractionDigits).formatToParts(Math.abs(value));
+  let integer = '';
+  let fraction = '';
+  let symbol = '';
+  for (const part of parts) {
+    switch (part.type) {
+      case 'integer':
+      case 'group':
+        integer += part.value;
+        break;
+      case 'decimal':
+      case 'fraction':
+        fraction += part.value;
+        break;
+      case 'currency':
+        symbol += part.value;
+        break;
+      default:
+        break;
+    }
+  }
+  const sign = value < 0 ? '−' : signed && value > 0 ? '+' : '';
+  return {
+    sign,
+    integer,
+    fraction,
+    currency: symbol,
+    formatted: formatMoney(value, currency, { fractionDigits, signed }),
+  };
 }
 
 /** Formats a percentage expressed as a number (2.5 => `+2,50%`). */

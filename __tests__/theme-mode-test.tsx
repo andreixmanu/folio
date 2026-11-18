@@ -3,7 +3,7 @@ import { Text } from 'react-native';
 
 import { useModeStore } from '@/store/mode-store';
 import { useUiStore } from '@/store/ui-store';
-import { useTheme } from '@/theme';
+import { rgbaFromHex, useTheme } from '@/theme';
 
 import { renderWithProviders } from '../test/test-utils';
 
@@ -23,6 +23,13 @@ function text(testID: string): string {
   const children = screen.getByTestId(testID).props.children;
   return typeof children === 'string' ? children : String(children);
 }
+
+describe('rgbaFromHex', () => {
+  test('expands a hex accent into an rgba glow stop', () => {
+    expect(rgbaFromHex('#7C6CFF', 0.26)).toBe('rgba(124,108,255,0.26)');
+    expect(rgbaFromHex('#0E9F84', 0.16)).toBe('rgba(14,159,132,0.16)');
+  });
+});
 
 describe('ThemeProvider mode accent', () => {
   beforeEach(() => {

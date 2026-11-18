@@ -21,13 +21,17 @@ function LoadingState() {
   const theme = useTheme();
   return (
     <View style={{ gap: theme.spacing.md }}>
-      <IslandCard>
-        <View style={{ gap: theme.spacing.md }}>
-          <Skeleton width={110} height={14} />
-          <Skeleton width={220} height={40} radius={12} />
-          <Skeleton height={150} radius={theme.radii.lg} />
-        </View>
-      </IslandCard>
+      <View
+        style={{
+          alignItems: 'center',
+          paddingTop: theme.spacing.xl,
+          gap: theme.spacing.md,
+        }}>
+        <Skeleton width={220} height={48} radius={14} />
+        <Skeleton width={96} height={22} radius={theme.radii.pill} />
+        <Skeleton height={148} radius={theme.radii.lg} />
+        <Skeleton height={34} radius={theme.radii.pill} />
+      </View>
       <IslandCard>
         <Skeleton height={120} radius={theme.radii.lg} />
       </IslandCard>
@@ -43,6 +47,7 @@ export default function PortfolioScreen() {
   return (
     <Screen
       testID="portfolio-screen"
+      glow
       refreshing={portfolio.isRefetching}
       onRefresh={() => void portfolio.refetch()}>
       <ScreenHeader
