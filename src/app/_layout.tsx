@@ -13,6 +13,7 @@ import * as SystemUI from 'expo-system-ui';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { BlurTargetProvider } from '@/components/navigation/blur-target';
 import { ModeTransitionOverlay } from '@/components/navigation/mode-transition-overlay';
 import { createQueryClient, useAppStateFocus } from '@/services/query-client';
 import { ThemeProvider, useTheme } from '@/theme';
@@ -46,19 +47,21 @@ function AppShell() {
       {/* Edge-to-edge: transparent system bars, content draws underneath. */}
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <NavigationBar style={isDark ? 'dark' : 'light'} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: theme.colors.background },
-          // Cross-fade between Investimenti and Budget. No slide, no bounce.
-          animation: 'fade',
-          animationDuration: 220,
-        }}>
-        {/* Movement and category detail: cards pushed above the Budget tabs, with the native back gesture. */}
-        <Stack.Screen name="transaction/[id]" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
-        <Stack.Screen name="category/[id]" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
-      </Stack>
-      <ModeTransitionOverlay />
+      <BlurTargetProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.colors.background },
+            // Cross-fade between Investimenti and Budget. No slide, no bounce.
+            animation: 'fade',
+            animationDuration: 220,
+          }}>
+          {/* Movement and category detail: cards pushed above the Budget tabs, with the native back gesture. */}
+          <Stack.Screen name="transaction/[id]" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
+          <Stack.Screen name="category/[id]" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
+        </Stack>
+        <ModeTransitionOverlay />
+      </BlurTargetProvider>
     </NavigationThemeProvider>
   );
 }

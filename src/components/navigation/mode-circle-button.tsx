@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Pressable, useWindowDimensions } from 'react-native';
 
 import { otherMode } from '@/components/navigation/mode-tabs';
+import { FrostedFill } from '@/components/ui/frosted-fill';
 import { Icon } from '@/components/ui/icon';
 import { ChartPie, Wallet } from '@/components/ui/icons';
 import { useModeStore, type AppMode } from '@/store/mode-store';
@@ -66,6 +67,7 @@ export function ModeCircleButton() {
         },
         floatingSurface(theme.scheme),
       ]}>
+      <FrostedFill />
       <Icon icon={other === 'budget' ? Wallet : ChartPie} size={22} color={accent} />
     </Pressable>
   );

@@ -4,6 +4,7 @@ export * from './change-chip';
 export * from './hero-balance';
 export * from './hero-glow';
 export * from './filter-chips';
+export * from './frosted-fill';
 export * from './error-state';
 export * from './icon';
 export * from './island-card';

@@ -14,6 +14,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { ModeCircleButton, requestModeSwitch } from '@/components/navigation/mode-circle-button';
+import { FrostedFill } from '@/components/ui/frosted-fill';
 import { MODE_TABS, otherMode } from '@/components/navigation/mode-tabs';
 import { Icon } from '@/components/ui/icon';
 import { AppText } from '@/components/ui/text';
@@ -274,7 +275,7 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
             alignItems: 'center',
             gap: theme.spacing.sm,
           }}>
-          {/* Outer: shadow, border and surface. Inner: clips both faces (shadows do not survive overflow hidden). */}
+          {/* Outer: shadow and hairline. Inner: clips the frost and both faces (shadows do not survive overflow hidden). */}
           <View
             style={[
               {
@@ -293,6 +294,7 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
                 onAccessibilityAction={onAccessibilityAction}
                 onLayout={onLayout}
                 style={{ flex: 1, borderRadius: theme.radii.pill, overflow: 'hidden' }}>
+                <FrostedFill />
                 <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, tintStyle]} />
                 <Animated.View
                   pointerEvents="none"
