@@ -1,11 +1,12 @@
 /**
  * Budget analytics. Every sum is accumulated in cents and converted back once.
- * Spending is outflows excluding transfers. Income is inflows categorised as income.
+ * Spending is outflows excluding transfers. Income is inflows categorised as income or interest.
  */
 
 import { addDays, addMonths, dayOfMonth, daysBetween, daysInMonth, endOfMonth, startOfMonth, toISODate, yearMonth } from './dates';
 import { displayMerchant } from './merchant';
 import {
+  INCOME_CATEGORY_IDS,
   fromCents,
   sumAmounts,
   toCents,
@@ -51,7 +52,7 @@ function isSpent(tx: Transaction): boolean {
 }
 
 function isIncome(tx: Transaction): boolean {
-  return tx.amount.amount > 0 && tx.categoryId === 'income';
+  return tx.amount.amount > 0 && tx.categoryId != null && INCOME_CATEGORY_IDS.has(tx.categoryId);
 }
 
 export type CategorySpend = {

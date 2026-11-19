@@ -321,6 +321,20 @@ export function createMockBudgetData(now: Date): MockBudgetData {
       bankTransactionCode: 'PMNT-RCDT-ESCT',
     });
 
+    // Revolut savings: principal to the deposit pot is a giroconto, the interest is income.
+    add(slice, 8, {
+      accountId: REVOLUT,
+      amountCents: -20_000,
+      remittanceInformation: 'To Conto deposito senza vincoli',
+      bankTransactionCode: 'TRANSFER',
+    });
+    add(slice, 1, {
+      accountId: REVOLUT,
+      amountCents: 112,
+      remittanceInformation: 'Interessi Conto deposito',
+      bankTransactionCode: 'TRANSFER',
+    });
+
     add(slice, 9, {
       accountId: AURORA,
       amountCents: -3500,

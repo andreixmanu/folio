@@ -30,7 +30,7 @@ function load(now: Date) {
 }
 
 describe('budget model', () => {
-  test('lists the twelve Italian categories with a budget accent on subscriptions', () => {
+  test('lists the thirteen Italian categories with a budget accent on subscriptions', () => {
     expect(CATEGORIES.map((category) => category.label)).toEqual([
       'Alimentari',
       'Ristoranti',
@@ -42,6 +42,7 @@ describe('budget model', () => {
       'Svago',
       'Viaggi',
       'Stipendio/Entrate',
+      'Interessi',
       'Trasferimenti',
       'Altro',
     ]);
@@ -143,7 +144,8 @@ describe('createMockBudgetData', () => {
     expect(today).toBe(_label);
     if (today === '2026-11-16') {
       expect(totalSpent(txs, month)).toBe(1453.77);
-      expect(totalIncome(txs, month)).toBe(40);
+      // 40 € from a friend plus 1,12 € deposit interest; the deposit principal is not spending.
+      expect(totalIncome(txs, month)).toBe(41.12);
       expect(progress.map((row) => [row.categoryId, row.spent, row.state])).toEqual([
         ['groceries', 159.34, 'ok'],
         ['restaurants', 81.87, 'ok'],
@@ -201,7 +203,7 @@ describe('createMockBudgetData', () => {
     const topUp = txs.find((tx) => tx.remittanceInformation === 'Ricarica Revolut');
     expect(topUp).toMatchObject({ categoryId: 'transfers', categorySource: 'builtin' });
 
-    expect(totalIncome(txs, { from: '2026-11-01', to: '2026-11-16' })).toBe(40);
+    expect(totalIncome(txs, { from: '2026-11-01', to: '2026-11-16' })).toBe(41.12);
   });
 
   test('netflix, spotify and iliad fall inside 14 days on every calendar day', () => {

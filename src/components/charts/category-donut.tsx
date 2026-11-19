@@ -2,7 +2,8 @@ import { View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { MoneyText, categoryColor } from '@/features/budget/components';
-import { isCategoryId } from '@/features/budget/model';
+import { isCategoryId, type Category } from '@/features/budget/model';
+import { useCustomCategories } from '@/features/budget/use-categories';
 import { useTheme, type ColorSchemeName } from '@/theme';
 
 export type CategoryDonutSlice = {
@@ -21,9 +22,14 @@ export type CategoryDonutProps = {
 const STROKE = 16;
 const GAP = 2;
 
-function sliceColor(categoryId: string, scheme: ColorSchemeName, fallback: string): string {
+function sliceColor(
+  categoryId: string,
+  scheme: ColorSchemeName,
+  fallback: string,
+  custom: readonly Category[],
+): string {
   if (!isCategoryId(categoryId)) return fallback;
-  return categoryColor(categoryId, scheme);
+  return categoryColor(categoryId, scheme, custom);
 }
 
 /**
@@ -38,6 +44,7 @@ export function CategoryDonut({
   testID = 'category-donut',
 }: CategoryDonutProps) {
   const theme = useTheme();
+  const custom = useCustomCategories();
   const radius = (size - STROKE) / 2;
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
@@ -47,7 +54,7 @@ export function CategoryDonut({
   const lengths = arcs.map((slice) => (sum > 0 ? (slice.value / sum) * circumference : 0));
   const segments = lengths.map((length, index) => ({
     key: arcs[index]?.categoryId ?? String(index),
-    color: sliceColor(arcs[index]?.categoryId ?? '', theme.scheme, theme.colors.textTertiary),
+    color: sliceColor(arcs[index]?.categoryId ?? '', theme.scheme, theme.colors.textTertiary, custom),
     dash: Math.max(0, length - GAP),
     offset: lengths.slice(0, index).reduce((acc, value) => acc + value, 0),
   }));

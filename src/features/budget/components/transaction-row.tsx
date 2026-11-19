@@ -2,7 +2,8 @@ import { ListRow } from '@/components/ui';
 
 import { formatDayLabel } from '../analytics';
 import { displayMerchant } from '../merchant';
-import { CATEGORY_BY_ID, counterpartyRaw, type RecurringCadence, type RecurringPayment, type Transaction } from '../model';
+import { counterpartyRaw, type RecurringCadence, type RecurringPayment, type Transaction } from '../model';
+import { useCategory } from '../use-categories';
 
 import { CategoryBadge } from './category-badge';
 import { MoneyText } from './money-text';
@@ -33,7 +34,7 @@ export function TransactionRow({
   onPress?: () => void;
   testID?: string;
 }) {
-  const category = CATEGORY_BY_ID[tx.categoryId ?? 'other'];
+  const category = useCategory(tx.categoryId);
   const when = formatDayLabel(tx.bookingDate, today);
   const subtitle = tx.status === 'pending' ? `${category.label} · ${when} · In sospeso` : `${category.label} · ${when}`;
   return (

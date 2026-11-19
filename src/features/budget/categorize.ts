@@ -288,6 +288,68 @@ function isOwnTransfer(merchantKey: string, haystack: string, ownKeys?: Readonly
   return false;
 }
 
+/** Always a move to or from Andrei's own savings / deposit pot. */
+const SAVINGS_STRONG_PHRASES: readonly string[] = [
+  'conto deposito',
+  'deposito senza vincoli',
+  'conto risparmio',
+  'instant access savings',
+  'savings account',
+  'savings vault',
+  'salvadanaio',
+];
+
+/** Savings words that only count on a non-card row with no named counterparty (a shop could be called “Pocket”). */
+const SAVINGS_WEAK_WORDS = new Set(['savings', 'saving', 'vault', 'vaults', 'pocket', 'pockets', 'deposito', 'deposit', 'risparmi']);
+
+const INTEREST_PHRASES: readonly string[] = ['interessi', 'interesse', 'interest', 'rendimento'];
+
+/**
+ * Revolut vault / pocket moves arrive as a bare `To EUR` (outflow, often with an
+ * `MB:` reference) or `To EUR` / `From EUR` (inflow), with no counterparty.
+ */
+const POCKET_MOVE_RE = /^(?:to|from)\s+[a-z]{3}(?:\s+mb:[0-9a-f-]+)?$/i;
+
+function isCardCode(code: string | undefined): boolean {
+  const normalized = code?.trim().toUpperCase() ?? '';
+  return normalized.startsWith('CARD') || normalized === 'ATM';
+}
+
+/**
+ * Interest credited by a savings / deposit account. Inflows only: outgoing
+ * “interessi” (loan interest) stay ordinary spending.
+ */
+export function isInterestCredit(
+  tx: Pick<Transaction, 'amount' | 'creditorName' | 'debtorName' | 'remittanceInformation' | 'bankTransactionCode'>,
+): boolean {
+  if (tx.amount.amount <= 0 || isCardCode(tx.bankTransactionCode)) return false;
+  const haystack = foldLight(`${counterpartyRaw(tx)} ${tx.remittanceInformation ?? ''}`);
+  return INTEREST_PHRASES.some((phrase) => containsPhrase(haystack, phrase));
+}
+
+/**
+ * Principal moving between the current account and Andrei's own savings /
+ * deposit account (Revolut “Conto deposito senza vincoli”, vaults, pockets).
+ * Works on a single leg: the deposit account itself is usually not linked.
+ */
+export function isSavingsMove(
+  tx: Pick<
+    Transaction,
+    'amount' | 'creditorName' | 'debtorName' | 'remittanceInformation' | 'bankTransactionCode' | 'merchantCategoryCode'
+  >,
+): boolean {
+  if (tx.amount.amount === 0) return false;
+  const remittance = tx.remittanceInformation?.trim() ?? '';
+  const haystack = foldLight(`${counterpartyRaw(tx)} ${remittance}`);
+  if (SAVINGS_STRONG_PHRASES.some((phrase) => containsPhrase(haystack, phrase))) return true;
+  // Weak signals only on internal-looking rows: no card, no MCC, no named counterparty
+  // (a “deposito cauzionale” paid to a landlord carries the landlord's name).
+  if (isCardCode(tx.bankTransactionCode) || tx.merchantCategoryCode || counterpartyRaw(tx)) return false;
+  if (POCKET_MOVE_RE.test(remittance)) return true;
+  if (tokenize(haystack).includes('cauzionale')) return false;
+  return tokenize(haystack).some((token) => SAVINGS_WEAK_WORDS.has(token));
+}
+
 /**
  * `IP` is a fuel brand and a common letter pair. It matches only as the whole
  * merchant key, or as a standalone token next to a fuel word.
@@ -339,6 +401,9 @@ export function categorize(tx: Transaction, options: CategorizeOptions): Categor
     const custom = matchPhrases(options.builtinRules, haystack, direction, merchantKey, false);
     if (custom) return { categoryId: custom, source: 'builtin' };
   } else {
+    // Interest from the deposit account is income; the principal moving in and out is not.
+    if (isInterestCredit(tx)) return { categoryId: 'interest', source: 'builtin' };
+    if (isSavingsMove(tx)) return { categoryId: 'transfers', source: 'builtin' };
     // TOPUP / EXCHANGE are Revolut funding and FX, not payments to other people.
     // A plain TRANSFER code is left alone: most of those are payments to someone else.
     if (isFundingCode(tx.bankTransactionCode) || isOwnTransfer(merchantKey, haystack, options.ownMerchantKeys)) {

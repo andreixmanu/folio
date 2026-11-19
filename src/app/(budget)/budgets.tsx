@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
@@ -27,7 +28,8 @@ import { CategoryBadge, MoneyText } from '@/features/budget/components';
 import { BudgetLimitSheet } from '@/features/budget/components/budget-limit-sheet';
 import { toISODate } from '@/features/budget/dates';
 import { useBudgetProgress, useRecurring, useRefreshBudget } from '@/features/budget/hooks';
-import { CATEGORIES, CATEGORY_BY_ID, type CategoryId, type RecurringPayment } from '@/features/budget/model';
+import { type CategoryId, type RecurringPayment } from '@/features/budget/model';
+import { useAllCategories, useCategory } from '@/features/budget/use-categories';
 import { useBudgetStore } from '@/features/budget/store';
 import { MASK } from '@/lib/format';
 import { useUiStore } from '@/store/ui-store';
@@ -98,7 +100,7 @@ function BudgetCategoryRow({
   onPress: () => void;
 }) {
   const theme = useTheme();
-  const category = CATEGORY_BY_ID[row.categoryId];
+  const category = useCategory(row.categoryId);
   const tone = budgetTone(row.state);
   const captionColor = tone === 'accent' ? 'textSecondary' : tone;
   return (
@@ -183,6 +185,7 @@ export default function BudgetsScreen() {
   const budgets = useBudgetStore((state) => state.budgets);
   const setBudgetLimit = useBudgetStore((state) => state.setBudgetLimit);
   const removeBudget = useBudgetStore((state) => state.removeBudget);
+  const allCategories = useAllCategories();
   const progressQuery = useBudgetProgress();
   const recurringQuery = useRecurring();
   const [creating, setCreating] = useState(false);
@@ -201,7 +204,9 @@ export default function BudgetsScreen() {
   };
 
   const taken = new Set(budgets.map((budget) => budget.categoryId));
-  const availableCategoryIds = CATEGORIES.map((category) => category.id).filter((id) => !taken.has(id));
+  const availableCategoryIds = allCategories
+    .map((category) => category.id)
+    .filter((id) => !taken.has(id));
   const sheetOpen = creating || editingId != null;
   const editingBudget = budgets.find((budget) => budget.categoryId === editingId);
 
@@ -262,7 +267,20 @@ export default function BudgetsScreen() {
         </IslandCard>
 
         <IslandCard index={1} testID="budget-categories">
-          <SectionTitle title="Categorie" />
+          <SectionTitle
+            title="Categorie"
+            right={
+              <PressableScale
+                haptic="selection"
+                testID="manage-categories"
+                onPress={() => router.push('/categories')}
+                accessibilityLabel="Gestisci categorie">
+                <AppText variant="caption" color="accent">
+                  Gestisci
+                </AppText>
+              </PressableScale>
+            }
+          />
           {rows.length === 0 ? (
             <AppText variant="caption" color="textSecondary" style={{ marginTop: theme.spacing.sm }}>
               Nessun budget impostato

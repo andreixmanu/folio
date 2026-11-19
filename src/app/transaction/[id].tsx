@@ -18,7 +18,8 @@ import { CategoryPickerSheet } from '@/features/budget/components/category-picke
 import { CategoryBadge, MoneyText } from '@/features/budget/components';
 import { useAccounts, useCategorizedTransactions, useRefreshBudget } from '@/features/budget/hooks';
 import { displayMerchant } from '@/features/budget/merchant';
-import { CATEGORY_BY_ID, counterpartyRaw, type CategoryId, type Transaction } from '@/features/budget/model';
+import { counterpartyRaw, type CategoryId, type Transaction } from '@/features/budget/model';
+import { useCategoryResolver } from '@/features/budget/use-categories';
 import { useBudgetStore } from '@/features/budget/store';
 import { isUserChosen } from '@/features/budget/transactions-view';
 import { useUiStore } from '@/store/ui-store';
@@ -104,12 +105,16 @@ export default function TransactionDetailScreen() {
   useSyncMode('budget');
   const masked = useUiStore((state) => state.hideBalances);
   const setCategoryForTransaction = useBudgetStore((state) => state.setCategoryForTransaction);
+  const clearCategoryForTransaction = useBudgetStore((state) => state.clearCategoryForTransaction);
+  const userRules = useBudgetStore((state) => state.userRules);
+  const removeRule = useBudgetStore((state) => state.removeRule);
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = paramId(params.id);
   const transactionsQuery = useCategorizedTransactions();
   const accountsQuery = useAccounts();
   const bankRefresh = useRefreshBudget();
   const [open, setOpen] = useState(false);
+  const resolveCategory = useCategoryResolver();
 
   const transactions = transactionsQuery.data;
   const tx = transactions?.find((item) => item.id === id);
@@ -136,7 +141,7 @@ export default function TransactionDetailScreen() {
       </AppText>
     );
   } else {
-    const category = CATEGORY_BY_ID[tx.categoryId ?? 'other'];
+    const category = resolveCategory(tx.categoryId);
     const accountName = accountsQuery.data?.find((account) => account.id === tx.accountId)?.name ?? '—';
     const causale = tx.remittanceInformation?.trim() || '—';
     body = (
@@ -192,6 +197,19 @@ export default function TransactionDetailScreen() {
             selected={tx.categoryId ? [tx.categoryId] : []}
             showMerchantSwitch
             merchantSwitchDisabled={!tx.merchantKey}
+            allowCreate
+            onReset={
+              isUserChosen(tx)
+                ? () => {
+                    clearCategoryForTransaction(tx.id);
+                    // A saved “similar movements” rule for this merchant goes too.
+                    for (const rule of userRules) {
+                      if (tx.merchantKey && rule.merchantKey === tx.merchantKey) removeRule(rule.id);
+                    }
+                    setOpen(false);
+                  }
+                : undefined
+            }
             onClose={() => setOpen(false)}
             onApply={(ids, options) => {
               const categoryId: CategoryId | undefined = ids[0];

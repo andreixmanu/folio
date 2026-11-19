@@ -4,9 +4,10 @@ import { AppText, ListRow, PressableScale } from '@/components/ui';
 import { formatMoney, formatPercent, MASK } from '@/lib/format';
 import { useTheme } from '@/theme';
 
-import { CATEGORY_BY_ID, type CategoryId } from '../model';
+import { type CategoryId } from '../model';
+import { useCategory } from '../use-categories';
 
-import { CategoryBadge, categoryColor } from './category-badge';
+import { CategoryBadge } from './category-badge';
 
 function ShareBar({ share, color }: { share: number; color: string }) {
   const theme = useTheme();
@@ -43,8 +44,8 @@ export function CategorySpendRow({
   testID?: string;
 }) {
   const theme = useTheme();
-  const category = CATEGORY_BY_ID[categoryId];
-  const color = categoryColor(categoryId, theme.scheme);
+  const category = useCategory(categoryId);
+  const color = category.color[theme.scheme];
   const amountText = masked ? MASK : formatMoney(amount);
   const shareText = formatPercent(share * 100, { signed: false, decimals: 0 });
   return (

@@ -29,7 +29,8 @@ import {
 } from '@/features/budget/analytics';
 import { CategoryBadge, MoneyText } from '@/features/budget/components';
 import { useCategorizedTransactions, useRefreshBudget } from '@/features/budget/hooks';
-import { CATEGORY_BY_ID, isCategoryId } from '@/features/budget/model';
+import { isCategoryId } from '@/features/budget/model';
+import { useCategory } from '@/features/budget/use-categories';
 import { formatPercent } from '@/lib/format';
 import { useUiStore } from '@/store/ui-store';
 import { useTheme } from '@/theme';
@@ -83,7 +84,7 @@ function CategoryAnalysisRow({
   onPress: () => void;
 }) {
   const theme = useTheme();
-  const category = CATEGORY_BY_ID[row.categoryId];
+  const category = useCategory(row.categoryId);
   return (
     <PressableScale
       haptic="selection"

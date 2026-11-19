@@ -106,6 +106,7 @@ function AppShell() {
         {/* Movement and category detail: cards pushed above the Budget tabs, with the native back gesture. */}
         <Stack.Screen name="transaction/[id]" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="category/[id]" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
+        <Stack.Screen name="categories" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
       </Stack>
       <ModeTransitionOverlay />
     </NavigationThemeProvider>

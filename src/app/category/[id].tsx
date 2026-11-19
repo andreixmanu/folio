@@ -22,7 +22,8 @@ import {
 import { CategoryBadge, MoneyText, TransactionRow } from '@/features/budget/components';
 import { toISODate } from '@/features/budget/dates';
 import { useCategorizedTransactions, useRefreshBudget } from '@/features/budget/hooks';
-import { CATEGORY_BY_ID, isCategoryId, sumAmounts, type CategoryId } from '@/features/budget/model';
+import { isCategoryId, sumAmounts, type CategoryId } from '@/features/budget/model';
+import { useCategoryResolver } from '@/features/budget/use-categories';
 import { useUiStore } from '@/store/ui-store';
 import { useSyncMode } from '@/store/use-sync-mode';
 import { useTheme } from '@/theme';
@@ -79,6 +80,7 @@ export default function CategoryDetailScreen() {
   const rawId = firstParam(params.id);
   const categoryId: CategoryId | null = isCategoryId(rawId) ? rawId : null;
   const period = periodFromParam(params.period);
+  const resolveCategory = useCategoryResolver();
   const query = useCategorizedTransactions();
   const bankRefresh = useRefreshBudget();
   const [now] = useState(() => new Date());
@@ -108,7 +110,7 @@ export default function CategoryDetailScreen() {
       <DetailSkeleton />
     );
   } else {
-    const category = CATEGORY_BY_ID[categoryId];
+    const category = resolveCategory(categoryId);
     const range = periodRange(period, now);
     const movements = transactionsForCategory(transactions, categoryId, range);
     const merchants = merchantsForCategory(transactions, categoryId, range);

@@ -35,7 +35,7 @@ export type Account = {
 
 export type TransactionStatus = 'booked' | 'pending';
 
-export type CategoryId =
+export type BuiltinCategoryId =
   | 'groceries'
   | 'restaurants'
   | 'transport'
@@ -46,8 +46,14 @@ export type CategoryId =
   | 'leisure'
   | 'travel'
   | 'income'
+  | 'interest'
   | 'transfers'
   | 'other';
+
+/** Ids of categories Andrei creates. Always `custom-` plus a lowercase slug. */
+export type CustomCategoryId = `custom-${string}`;
+
+export type CategoryId = BuiltinCategoryId | CustomCategoryId;
 
 /**
  * Who picked the category.
@@ -68,7 +74,25 @@ export type CategoryIconName =
   | 'Plane'
   | 'Banknote'
   | 'ArrowLeftRight'
-  | 'Ellipsis';
+  | 'Ellipsis'
+  | 'PiggyBank'
+  | 'Gift'
+  | 'Car'
+  | 'Baby'
+  | 'Dog'
+  | 'GraduationCap'
+  | 'Dumbbell'
+  | 'Shirt'
+  | 'Wrench'
+  | 'Smartphone'
+  | 'Coffee'
+  | 'Briefcase'
+  | 'Music'
+  | 'Gamepad2'
+  | 'BookOpen'
+  | 'Heart'
+  | 'Star'
+  | 'Tag';
 
 export type Category = {
   id: CategoryId;
@@ -77,6 +101,8 @@ export type Category = {
   /** Lucide icon name. The UI maps it to a component; this file does not. */
   icon: CategoryIconName;
   color: { dark: string; light: string };
+  /** True for categories Andrei created. Built-ins leave it unset. */
+  custom?: boolean;
 };
 
 /**
@@ -94,18 +120,99 @@ export const CATEGORIES: readonly Category[] = [
   { id: 'leisure', label: 'Svago', icon: 'Ticket', color: { dark: '#F7D154', light: '#B8920A' } },
   { id: 'travel', label: 'Viaggi', icon: 'Plane', color: { dark: '#8CA3FF', light: '#4C63D6' } },
   { id: 'income', label: 'Stipendio/Entrate', icon: 'Banknote', color: { dark: '#4DE1C1', light: '#0F8F78' } },
+  { id: 'interest', label: 'Interessi', icon: 'PiggyBank', color: { dark: '#7FE3A0', light: '#2E9E57' } },
   { id: 'transfers', label: 'Trasferimenti', icon: 'ArrowLeftRight', color: { dark: '#7C6CFF', light: '#5B4BFF' } },
   { id: 'other', label: 'Altro', icon: 'Ellipsis', color: { dark: '#9A9AA8', light: '#6B6B78' } },
 ];
 
-export const CATEGORY_IDS: readonly CategoryId[] = CATEGORIES.map((category) => category.id);
+export const CATEGORY_IDS: readonly BuiltinCategoryId[] = CATEGORIES.map(
+  (category) => category.id as BuiltinCategoryId,
+);
 
-export const CATEGORY_BY_ID: Record<CategoryId, Category> = Object.fromEntries(
+export const CATEGORY_BY_ID: Record<BuiltinCategoryId, Category> = Object.fromEntries(
   CATEGORIES.map((category) => [category.id, category]),
-) as Record<CategoryId, Category>;
+) as Record<BuiltinCategoryId, Category>;
 
-export function isCategoryId(value: unknown): value is CategoryId {
+export function isBuiltinCategoryId(value: unknown): value is BuiltinCategoryId {
   return typeof value === 'string' && (CATEGORY_IDS as readonly string[]).includes(value);
+}
+
+const CUSTOM_ID_RE = /^custom-[a-z0-9][a-z0-9-]{0,63}$/;
+
+export function isCustomCategoryId(value: unknown): value is CustomCategoryId {
+  return typeof value === 'string' && CUSTOM_ID_RE.test(value);
+}
+
+/** Built-in id, or a well-formed custom id (which may since have been deleted). */
+export function isCategoryId(value: unknown): value is CategoryId {
+  return isBuiltinCategoryId(value) || isCustomCategoryId(value);
+}
+
+/** Categories whose inflows count as income in totals. */
+export const INCOME_CATEGORY_IDS: ReadonlySet<CategoryId> = new Set<CategoryId>(['income', 'interest']);
+
+/**
+ * Category for an id. Custom ids look in `custom`; an unknown or deleted id
+ * falls back to “Altro” so a stale reference never crashes a screen.
+ */
+export function resolveCategory(
+  id: CategoryId | undefined,
+  custom: readonly Category[] = [],
+): Category {
+  if (!id) return CATEGORY_BY_ID.other;
+  if (isBuiltinCategoryId(id)) return CATEGORY_BY_ID[id];
+  return custom.find((category) => category.id === id) ?? CATEGORY_BY_ID.other;
+}
+
+/** Icons offered when creating a custom category. */
+export const CUSTOM_CATEGORY_ICONS: readonly CategoryIconName[] = [
+  'Tag',
+  'PiggyBank',
+  'Gift',
+  'Car',
+  'Baby',
+  'Dog',
+  'GraduationCap',
+  'Dumbbell',
+  'Shirt',
+  'Wrench',
+  'Smartphone',
+  'Coffee',
+  'Briefcase',
+  'Music',
+  'Gamepad2',
+  'BookOpen',
+  'Heart',
+  'Star',
+  'House',
+  'Plane',
+  'ShoppingBag',
+  'UtensilsCrossed',
+  'HeartPulse',
+  'Ticket',
+];
+
+/** Colour pairs offered for custom categories, in the same family as the built-ins. */
+export const CUSTOM_CATEGORY_COLORS: readonly { dark: string; light: string }[] = [
+  { dark: '#FF6B8B', light: '#E04568' },
+  { dark: '#FF8A4C', light: '#D4652A' },
+  { dark: '#FFB547', light: '#C4840F' },
+  { dark: '#F7D154', light: '#B8920A' },
+  { dark: '#2FD08A', light: '#12A86B' },
+  { dark: '#4DE1C1', light: '#0F8F78' },
+  { dark: '#35C2FF', light: '#0B8EC4' },
+  { dark: '#8CA3FF', light: '#4C63D6' },
+  { dark: '#B98CFF', light: '#7A52D6' },
+  { dark: '#FF7AD9', light: '#C2449F' },
+  { dark: '#C9A27E', light: '#8A6440' },
+  { dark: '#9A9AA8', light: '#6B6B78' },
+];
+
+export function isCategoryIconName(value: unknown): value is CategoryIconName {
+  return (
+    typeof value === 'string' &&
+    (CUSTOM_CATEGORY_ICONS as readonly string[]).concat(CATEGORIES.map((c) => c.icon)).includes(value)
+  );
 }
 
 export type Transaction = {

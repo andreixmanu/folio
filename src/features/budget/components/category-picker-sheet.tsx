@@ -3,19 +3,24 @@ import { Modal, Pressable, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Icon, PressableScale } from '@/components/ui';
-import { Check } from '@/components/ui/icons';
+import { Check, Plus } from '@/components/ui/icons';
+import { useKeyboardInset } from '@/lib/use-keyboard-visible';
 import { useTheme } from '@/theme';
 
-import { CATEGORIES, type CategoryId } from '../model';
+import { type CategoryId } from '../model';
+import { useBudgetStore } from '../store';
+import { useAllCategories } from '../use-categories';
 
 import { CategoryBadge } from './category-badge';
+import { CategoryEditorForm } from './category-editor';
 
 export type CategoryApplyOptions = {
   applyToMerchant: boolean;
 };
 
 /**
- * Slide-up sheet. Single mode saves one category and can store a merchant rule.
+ * Slide-up sheet. Single mode saves one category and can store a merchant rule;
+ * it can also create a custom category inline and reset a manual choice.
  * Multi mode is the list filter: Azzera clears, Applica commits the selection.
  */
 export function CategoryPickerSheet({
@@ -25,6 +30,8 @@ export function CategoryPickerSheet({
   onClose,
   showMerchantSwitch = false,
   merchantSwitchDisabled = false,
+  allowCreate = false,
+  onReset,
 }: {
   mode: 'multi' | 'single';
   selected: CategoryId[];
@@ -32,9 +39,17 @@ export function CategoryPickerSheet({
   onClose: () => void;
   showMerchantSwitch?: boolean;
   merchantSwitchDisabled?: boolean;
+  /** Single mode: show “Nuova categoria”, which opens the editor inside the sheet. */
+  allowCreate?: boolean;
+  /** Single mode: when set, “Torna automatica” drops the manual choice. */
+  onReset?: () => void;
 }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const keyboard = useKeyboardInset();
+  const categories = useAllCategories();
+  const createCategory = useBudgetStore((state) => state.createCategory);
+  const [creating, setCreating] = useState(false);
   const [picked, setPicked] = useState<CategoryId[]>(selected);
   const [applyToMerchant, setApplyToMerchant] = useState(false);
   const merchantRule = mode === 'single' && showMerchantSwitch && !merchantSwitchDisabled && applyToMerchant;
@@ -77,7 +92,7 @@ export function CategoryPickerSheet({
               borderColor: theme.colors.border,
               paddingHorizontal: theme.spacing.lg,
               paddingTop: theme.spacing.sm,
-              paddingBottom: insets.bottom + theme.spacing.lg,
+              paddingBottom: (keyboard.visible ? keyboard.height : insets.bottom) + theme.spacing.lg,
               gap: theme.spacing.md,
             },
             theme.elevation(3),
@@ -92,14 +107,29 @@ export function CategoryPickerSheet({
             }}
           />
           <AppText variant="headline" accessibilityRole="header">
-            {mode === 'single' ? 'Categoria' : 'Categorie'}
+            {creating ? 'Nuova categoria' : mode === 'single' ? 'Categoria' : 'Categorie'}
           </AppText>
+          {creating ? (
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <CategoryEditorForm
+                takenLabels={categories.map((category) => category.label)}
+                submitLabel="Crea"
+                onCancel={() => setCreating(false)}
+                onSubmit={(input) => {
+                  const id = createCategory(input);
+                  if (id) setPicked(mode === 'single' ? [id] : (current) => [...current, id]);
+                  setCreating(false);
+                }}
+              />
+            </ScrollView>
+          ) : (
+          <>
           <ScrollView
             style={{ maxHeight: 420 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {CATEGORIES.map((category) => {
+            {categories.map((category) => {
               const on = picked.includes(category.id);
               return (
                 <View key={category.id} style={{ width: '50%', padding: 4 }}>
@@ -132,6 +162,44 @@ export function CategoryPickerSheet({
                 </View>
               );
             })}
+            {allowCreate && mode === 'single' ? (
+              <View style={{ width: '50%', padding: 4 }}>
+                <PressableScale
+                  haptic="selection"
+                  onPress={() => setCreating(true)}
+                  testID="category-option-new"
+                  accessibilityLabel="Nuova categoria">
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: theme.spacing.sm,
+                      minHeight: 48,
+                      paddingHorizontal: theme.spacing.sm,
+                      paddingVertical: theme.spacing.sm,
+                      borderRadius: theme.radii.lg,
+                      borderWidth: 1,
+                      borderStyle: 'dashed',
+                      borderColor: theme.colors.border,
+                    }}>
+                    <View
+                      style={{
+                        width: 28,
+                        height: 28,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: theme.radii.md,
+                        backgroundColor: theme.colors.surfaceMuted,
+                      }}>
+                      <Icon icon={Plus} size={16} color={theme.colors.accent} />
+                    </View>
+                    <AppText variant="label" color="accent" numberOfLines={2} style={{ flex: 1 }}>
+                      Nuova categoria
+                    </AppText>
+                  </View>
+                </PressableScale>
+              </View>
+            ) : null}
           </ScrollView>
           {mode === 'single' && showMerchantSwitch ? (
             <View
@@ -141,9 +209,12 @@ export function CategoryPickerSheet({
                 gap: theme.spacing.md,
                 opacity: merchantSwitchDisabled ? 0.4 : 1,
               }}>
-              <AppText variant="body" style={{ flex: 1 }}>
-                Applica sempre a questo esercente
-              </AppText>
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText variant="body">Applica ai movimenti simili</AppText>
+                <AppText variant="caption" color="textTertiary">
+                  Stesso esercente, anche per i movimenti futuri
+                </AppText>
+              </View>
               <Switch
                 testID="apply-to-merchant"
                 value={applyToMerchant}
@@ -153,9 +224,22 @@ export function CategoryPickerSheet({
                 trackColor={{ false: theme.colors.textTertiary, true: theme.colors.accent }}
                 ios_backgroundColor={theme.colors.textTertiary}
                 thumbColor={applyToMerchant ? '#FFFFFF' : theme.colors.textSecondary}
-                accessibilityLabel="Applica sempre a questo esercente"
+                accessibilityLabel="Applica ai movimenti simili"
               />
             </View>
+          ) : null}
+          {mode === 'single' && onReset ? (
+            <PressableScale
+              haptic="selection"
+              testID="category-reset"
+              onPress={onReset}
+              accessibilityLabel="Torna alla categoria automatica">
+              <View style={{ minHeight: 36, justifyContent: 'center' }}>
+                <AppText variant="bodyStrong" color="textSecondary">
+                  Torna alla categoria automatica
+                </AppText>
+              </View>
+            </PressableScale>
           ) : null}
           <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
             {mode === 'multi' ? (
@@ -194,6 +278,8 @@ export function CategoryPickerSheet({
               </AppText>
             </PressableScale>
           </View>
+          </>
+          )}
         </View>
       </View>
     </Modal>

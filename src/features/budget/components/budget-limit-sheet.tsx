@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, PressableScale } from '@/components/ui';
 import { useTheme } from '@/theme';
 
-import { CATEGORY_BY_ID, type CategoryId } from '../model';
+import { type CategoryId } from '../model';
+import { useCategoryResolver } from '../use-categories';
 
 import { CategoryBadge } from './category-badge';
 
@@ -52,7 +53,8 @@ export function BudgetLimitSheet({
   const [raw, setRaw] = useState(initialAmount == null ? '' : formatLimitInput(initialAmount));
   const parsed = parseLimitInput(raw);
   const saveDisabled = parsed == null;
-  const category = categoryId ? CATEGORY_BY_ID[categoryId] : null;
+  const resolve = useCategoryResolver();
+  const category = categoryId ? resolve(categoryId) : null;
 
   const step = (delta: number) => {
     const current = parsed ?? 0;
@@ -119,7 +121,7 @@ export function BudgetLimitSheet({
               showsVerticalScrollIndicator={false}
               style={{ maxHeight: 420 }}>
               {availableCategoryIds.map((id) => {
-                const item = CATEGORY_BY_ID[id];
+                const item = resolve(id);
                 return (
                   <PressableScale
                     key={id}
