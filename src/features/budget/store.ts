@@ -65,6 +65,8 @@ export function newCustomCategoryId(
 const HEX_RE = /^#[0-9a-f]{6}$/i;
 
 type BudgetState = {
+  /** False until AsyncStorage has been read. Edits before that are ignored. */
+  hasHydrated: boolean;
   userRules: Rule[];
   /** Single-transaction corrections. A merchant rule outranks these once it covers that shop. */
   categoryOverrides: Record<string, CategoryId>;
@@ -211,15 +213,42 @@ function dropMerchantOverrides(
   return { overrides: nextOverrides, merchants: nextMerchants };
 }
 
+/** One `setState` that must not write the slice (a failed read must not replace saved rules with defaults). */
+let skipWrite = false;
+
+const createdStorage = createJSONStorage(() => AsyncStorage);
+if (!createdStorage) throw new Error('Budget storage unavailable');
+const budgetStorage = createdStorage;
+const storage = {
+  getItem: budgetStorage.getItem.bind(budgetStorage),
+  removeItem: budgetStorage.removeItem.bind(budgetStorage),
+  setItem: (...args: Parameters<typeof budgetStorage.setItem>) => {
+    if (skipWrite) {
+      skipWrite = false;
+      return;
+    }
+    return budgetStorage.setItem(...args);
+  },
+};
+
+function markHydrated(): void {
+  if (useBudgetStore.getState().hasHydrated) return;
+  skipWrite = true;
+  useBudgetStore.setState({ hasHydrated: true });
+  skipWrite = false;
+}
+
 export const useBudgetStore = create<BudgetState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
+      hasHydrated: false,
       userRules: [],
       categoryOverrides: {},
       overrideMerchants: {},
       budgets: cloneBudgets(DEFAULT_BUDGETS),
       customCategories: [],
       createCategory(input) {
+        if (!get().hasHydrated) return null;
         const label = cleanCategoryLabel(input.label);
         if (!label) return null;
         let created: CustomCategoryId | null = null;
@@ -237,6 +266,7 @@ export const useBudgetStore = create<BudgetState>()(
         return created;
       },
       updateCategory(id, patch) {
+        if (!get().hasHydrated) return;
         set((state) => ({
           customCategories: state.customCategories.map((category) => {
             if (category.id !== id) return category;
@@ -251,6 +281,7 @@ export const useBudgetStore = create<BudgetState>()(
         }));
       },
       deleteCategory(id) {
+        if (!get().hasHydrated) return;
         set((state) => {
           const categoryOverrides: Record<string, CategoryId> = {};
           const overrideMerchants = { ...state.overrideMerchants };
@@ -268,6 +299,7 @@ export const useBudgetStore = create<BudgetState>()(
         });
       },
       clearCategoryForTransaction(txId) {
+        if (!get().hasHydrated) return;
         set((state) => {
           if (!(txId in state.categoryOverrides)) return {};
           const categoryOverrides = { ...state.categoryOverrides };
@@ -278,6 +310,7 @@ export const useBudgetStore = create<BudgetState>()(
         });
       },
       setCategoryForTransaction(txId, categoryId, options) {
+        if (!get().hasHydrated) return;
         const merchantKey = options.merchantKey ? normalizeMerchant(options.merchantKey) : '';
         set((state) => {
           if (options.applyToMerchant && merchantKey) {
@@ -306,9 +339,11 @@ export const useBudgetStore = create<BudgetState>()(
         });
       },
       removeRule(ruleId) {
+        if (!get().hasHydrated) return;
         set((state) => ({ userRules: state.userRules.filter((rule) => rule.id !== ruleId) }));
       },
       setBudgetLimit(categoryId, monthlyLimit) {
+        if (!get().hasHydrated) return;
         const limit = fromCents(Math.max(0, toCents(monthlyLimit)));
         set((state) => {
           const exists = state.budgets.some((budget) => budget.categoryId === categoryId);
@@ -321,6 +356,7 @@ export const useBudgetStore = create<BudgetState>()(
         });
       },
       removeBudget(categoryId) {
+        if (!get().hasHydrated) return;
         set((state) => ({
           budgets: state.budgets.filter((budget) => budget.categoryId !== categoryId),
         }));
@@ -328,7 +364,7 @@ export const useBudgetStore = create<BudgetState>()(
     }),
     {
       name: STORAGE_KEY,
-      storage: createJSONStorage(() => AsyncStorage),
+      storage,
       partialize: (state) => ({
         userRules: state.userRules,
         categoryOverrides: state.categoryOverrides,
@@ -357,8 +393,18 @@ export const useBudgetStore = create<BudgetState>()(
           categoryOverrides,
           overrideMerchants: sanitizeMerchants(stored.overrideMerchants) ?? current.overrideMerchants,
           budgets,
+          hasHydrated: true,
         };
+      },
+      onRehydrateStorage: () => () => {
+        markHydrated();
       },
     },
   ),
 );
+
+useBudgetStore.persist.onFinishHydration(markHydrated);
+
+if (useBudgetStore.persist.hasHydrated()) {
+  markHydrated();
+}

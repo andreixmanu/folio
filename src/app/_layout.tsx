@@ -21,6 +21,7 @@ import { Pressable, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ModeTransitionOverlay } from '@/components/navigation/mode-transition-overlay';
+import { useBudgetStore } from '@/features/budget/store';
 import { createQueryClient, useAppStateFocus } from '@/services/query-client';
 import { ThemeProvider, useTheme } from '@/theme';
 
@@ -123,7 +124,10 @@ export default function RootLayout() {
     Inter_700Bold,
     Inter_800ExtraBold,
   });
-  const ready = fontsLoaded || fontError !== null;
+  const budgetHydrated = useBudgetStore((s) => s.hasHydrated);
+  // Stay on the splash until saved categories are loaded, so a tap cannot be
+  // overwritten by the late read (and cannot write defaults over them).
+  const ready = (fontsLoaded || fontError !== null) && budgetHydrated;
 
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();

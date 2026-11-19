@@ -107,6 +107,18 @@ describe('budget store', () => {
     });
   });
 
+  test('ignores edits until hydration finishes, then accepts them', () => {
+    const before = useBudgetStore.getState().budgets.find((budget) => budget.categoryId === 'groceries')?.monthlyLimit;
+    useBudgetStore.setState({ hasHydrated: false });
+    useBudgetStore.getState().setBudgetLimit('groceries', 10);
+    expect(useBudgetStore.getState().budgets.find((budget) => budget.categoryId === 'groceries')?.monthlyLimit).toBe(
+      before,
+    );
+    useBudgetStore.setState({ hasHydrated: true });
+    useBudgetStore.getState().setBudgetLimit('groceries', 10);
+    expect(useBudgetStore.getState().budgets.find((budget) => budget.categoryId === 'groceries')?.monthlyLimit).toBe(10);
+  });
+
   test('rehydrates rules, overrides, and budgets, and drops invalid rows', async () => {
     await AsyncStorage.setItem(
       KEY,
