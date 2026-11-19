@@ -58,6 +58,7 @@ export default function PortfolioScreen() {
             totalValue={portfolio.data.totalValue}
             status={portfolio.status}
             pricesUpdatedAt={portfolio.pricesUpdatedAt}
+            totalNote={portfolio.totalNote}
           />
           <AllocationCard snapshot={portfolio.data} />
           <HoldingsBySource

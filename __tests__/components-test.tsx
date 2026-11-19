@@ -122,6 +122,7 @@ describe('<LiveIndicator />', () => {
     ['live', /^Live · 17:52:30, prezzi Kraken$/],
     ['stale', /^Offline · 17:52:30$/],
     ['error', /^Prezzi non disponibili$/],
+    ['partial', /^Totale parziale$/],
   ] as const)('%s', async (status, label) => {
     await renderWithProviders(<LiveIndicator status={status} updatedAt={t} />);
     expect(screen.getByTestId('live-indicator').props.accessibilityLabel).toMatch(label);

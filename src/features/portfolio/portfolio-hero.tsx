@@ -33,10 +33,12 @@ function PortfolioHeroImpl({
   totalValue,
   status,
   pricesUpdatedAt,
+  totalNote,
 }: {
   totalValue: number;
   status: PriceStatus;
   pricesUpdatedAt: number;
+  totalNote?: string | null;
 }) {
   const theme = useTheme();
   const range = useUiStore((s) => s.timeRange);
@@ -82,6 +84,11 @@ function PortfolioHeroImpl({
           {RANGE_CAPTION[range]}
         </AppText>
       </View>
+      {totalNote ? (
+        <AppText variant="caption" color="warning" testID="partial-total">
+          {totalNote}
+        </AppText>
+      ) : null}
 
       <View style={{ alignSelf: 'stretch', marginTop: theme.spacing.xs }}>
         {history.data ? (

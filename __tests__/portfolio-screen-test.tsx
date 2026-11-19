@@ -97,17 +97,23 @@ describe('PortfolioScreen wallets', () => {
     fetchWalletsMock.mockReset();
     fetchIbkrMock.mockReset();
     fetchIbkrMock.mockResolvedValue(IBKR_FIXTURE);
-    getQuotesMock.mockClear();
+    getQuotesMock.mockReset();
+    getQuotesMock.mockImplementation(async (symbols: string[]) => ({
+      source: 'kraken',
+      updatedAt: 't',
+      quotes: symbols.map((symbol) => ({ symbol, price: 100, changePct: 1 })),
+      unsupported: [],
+    }));
     useUiStore.setState({ timeRange: '1W', hideBalances: false });
   });
 
   test('renders the Tangem-style glow hero with the 1W range selected', async () => {
     fetchWalletsMock.mockResolvedValue(walletsOk);
     const { unmount } = await renderWithProviders(<PortfolioScreen />);
-    await waitFor(() => expect(screen.getByTestId('total-value')).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId('value-chart')).toBeTruthy());
+    expect(screen.getByTestId('total-value')).toBeTruthy();
     expect(screen.getByTestId('hero-glow')).toBeTruthy();
     expect(screen.getByTestId('portfolio-hero')).toBeTruthy();
-    expect(screen.getByTestId('value-chart')).toBeTruthy();
     expect(screen.getByTestId('range-1W').props.accessibilityState).toEqual({ selected: true });
     expect(screen.getByText('Tutto')).toBeTruthy();
     unmount();
@@ -191,6 +197,32 @@ describe('PortfolioScreen wallets', () => {
     await waitFor(() => expect(screen.getByTestId('holding-tangem-btc')).toBeTruthy());
     expect(screen.getByTestId('holding-ibkr-vwce')).toBeTruthy();
     expect(screen.getByText('Ethereum non disponibile')).toBeTruthy();
+    unmount();
+  });
+
+  test('a Kraken failure on first load still shows stocks and a partial total', async () => {
+    fetchWalletsMock.mockResolvedValue(walletsOk);
+    getQuotesMock.mockRejectedValue(new Error('kraken down'));
+
+    const { unmount } = await renderWithProviders(<PortfolioScreen />);
+    await waitFor(() => expect(screen.getByTestId('partial-total')).toBeTruthy());
+    expect(screen.getByTestId('holding-ibkr-vwce')).toBeTruthy();
+    expect(screen.queryByTestId('holding-tangem-btc')).toBeNull();
+    expect(screen.getByText('Totale parziale · prezzi crypto non disponibili')).toBeTruthy();
+    expect(screen.queryByTestId('portfolio-error')).toBeNull();
+    unmount();
+  });
+
+  test('an IBKR failure still shows crypto and a partial total', async () => {
+    fetchWalletsMock.mockResolvedValue(walletsOk);
+    fetchIbkrMock.mockRejectedValue(new Error('ibkr down'));
+
+    const { unmount } = await renderWithProviders(<PortfolioScreen />);
+    await waitFor(() => expect(screen.getByTestId('holding-tangem-btc')).toBeTruthy());
+    expect(screen.getByText('Totale parziale')).toBeTruthy();
+    expect(screen.queryByTestId('holding-ibkr-vwce')).toBeNull();
+    expect(screen.queryByTestId('portfolio-error')).toBeNull();
+    expect(fetchIbkrMock.mock.calls.length).toBeLessThan(6);
     unmount();
   });
 });

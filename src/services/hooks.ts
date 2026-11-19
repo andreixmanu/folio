@@ -15,7 +15,7 @@ const WALLETS_STALE_MS = 60_000;
 /** IBKR Flex is an end-of-day statement; the Worker caches it for ~8h. */
 const IBKR_STALE_MS = 30 * 60_000;
 
-export type PriceStatus = 'loading' | 'live' | 'stale' | 'error';
+export type PriceStatus = 'loading' | 'live' | 'stale' | 'error' | 'partial';
 
 function symbolsOf(positions: Position[] | undefined, assetClass: AssetClass): string[] {
   return [...new Set((positions ?? []).filter((p) => p.assetClass === assetClass).map((p) => p.symbol))].sort();
@@ -28,6 +28,8 @@ function useWallets() {
     staleTime: WALLETS_STALE_MS,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
+    // A failed fetch has no data, so the chart's observer would refetch, clear the error, and unmount.
+    retryOnMount: false,
   });
 }
 
@@ -38,6 +40,7 @@ export function useIbkrPositions() {
     staleTime: IBKR_STALE_MS,
     refetchOnWindowFocus: true,
     retry: 1,
+    retryOnMount: false,
   });
 }
 
@@ -60,7 +63,7 @@ function useCryptoQuotes(symbols: string[], enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.quotes('crypto', symbols),
     queryFn: ({ signal }) => priceSources.crypto.getQuotes(symbols, signal),
-    enabled,
+    enabled: enabled && symbols.length > 0,
     staleTime: QUOTE_REFRESH_MS - 5_000,
     refetchInterval: QUOTE_REFRESH_MS,
     refetchIntervalInBackground: false,
@@ -76,39 +79,51 @@ function joinNotes(...notes: (string | null)[]): string | null {
 
 /**
  * Portfolio snapshot = IBKR stocks/ETFs (Flex end-of-day marks, EUR) + Tangem quantities ×
- * live Kraken prices. Degrades gracefully: on a failed price refresh the last quotes stay
- * on screen (`stale`); a failed `/wallets` or `/positions` still shows the other source
- * plus an inline note.
+ * live Kraken prices. Each source fails on its own: a Kraken outage still shows the stocks,
+ * and the hero marks that total as partial. A later price failure keeps the previous
+ * numbers (`stale`).
  */
 export function usePortfolio() {
   const { sources, positions, wallets, ibkr, settled } = usePositions();
   const cryptoSymbols = symbolsOf(positions, 'crypto');
   const crypto = useCryptoQuotes(cryptoSymbols, settled);
+  const cryptoPending = cryptoSymbols.length > 0 && !crypto.data && !crypto.isError;
+  const ready = settled && !cryptoPending;
+  const missingCrypto = cryptoSymbols.length > 0 && crypto.isError && !crypto.data;
+  const missingIbkr = ibkr.isError;
+  const missingWallets = wallets.isError;
 
-  const data = useMemo(
-    () =>
-      settled && crypto.data
-        ? buildSnapshot(
-            sources,
-            positions,
-            [...crypto.data.quotes, ...(ibkr.data ? ibkrQuotes(ibkr.data) : [])],
-            crypto.data.updatedAt,
-          )
-        : undefined,
-    [settled, sources, positions, crypto.data, ibkr.data],
-  );
+  const snapshot = useMemo(() => {
+    if (!ready) return undefined;
+    const quotes = [...(crypto.data?.quotes ?? []), ...(ibkr.data ? ibkrQuotes(ibkr.data) : [])];
+    const updatedAt = crypto.data?.updatedAt ?? ibkr.data?.fetchedAt ?? new Date().toISOString();
+    return buildSnapshot(sources, positions, quotes, updatedAt);
+  }, [ready, sources, positions, crypto.data, ibkr.data]);
 
-  const status: PriceStatus = crypto.isError
-    ? crypto.data
+  const failedEmpty = !!snapshot && snapshot.holdings.length === 0 && (missingCrypto || missingIbkr || missingWallets);
+  const data = snapshot && !failedEmpty ? snapshot : undefined;
+  const totalNote = !data
+    ? null
+    : missingCrypto
+      ? 'Totale parziale · prezzi crypto non disponibili'
+      : missingIbkr || missingWallets
+        ? 'Totale parziale'
+        : null;
+
+  const status: PriceStatus = !ready
+    ? 'loading'
+    : crypto.isError && crypto.data
       ? 'stale'
-      : 'error'
-    : crypto.data
-      ? 'live'
-      : 'loading';
+      : totalNote
+        ? 'partial'
+        : !data && (missingCrypto || missingIbkr || missingWallets || crypto.isError)
+          ? 'error'
+          : 'live';
 
   return {
     data,
     status,
+    totalNote,
     error: crypto.error,
     walletNote: joinNotes(ibkrStatusNote(ibkr.data, ibkr.isError), walletStatusNote(wallets.data, wallets.isError)),
     /** IBKR statement date (`YYYY-MM-DD`), end-of-day values. */

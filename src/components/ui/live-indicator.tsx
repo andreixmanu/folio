@@ -10,7 +10,7 @@ import Animated, {
 
 import { easings, useTheme } from '@/theme';
 
-export type LiveStatus = 'loading' | 'live' | 'stale' | 'error';
+export type LiveStatus = 'loading' | 'live' | 'stale' | 'error' | 'partial';
 
 function clock(ms: number): string {
   return new Date(ms).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -45,7 +45,7 @@ export function LiveIndicator({
   const color =
     status === 'live'
       ? theme.colors.positive
-      : status === 'stale'
+      : status === 'stale' || status === 'partial'
         ? theme.colors.warning
         : status === 'error'
           ? theme.colors.negative
@@ -56,9 +56,11 @@ export function LiveIndicator({
       ? `Live · ${time}`
       : status === 'stale'
         ? `Offline · ${time}`
-        : status === 'error'
-          ? 'Prezzi non disponibili'
-          : 'Connessione…';
+        : status === 'partial'
+          ? 'Totale parziale'
+          : status === 'error'
+            ? 'Prezzi non disponibili'
+            : 'Connessione…';
 
   return (
     <View
