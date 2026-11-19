@@ -1,3 +1,4 @@
+import { getAppToken } from '../auth/token';
 import { ApiError, getJson } from '../api/client';
 import { resolveApiBaseUrl } from '../api/config';
 import type { Position, PriceQuote, PriceSeries, Source } from '../types';
@@ -51,7 +52,7 @@ export async function fetchIbkrPositions(signal?: AbortSignal): Promise<IbkrPosi
     signal,
     // Flex can need a few retries server-side while IBKR generates the statement.
     timeoutMs: 45_000,
-    headers: { 'X-Folio-Token': process.env.EXPO_PUBLIC_CHAT_TOKEN ?? '' },
+    headers: { 'X-Folio-Token': await getAppToken() },
   });
 }
 

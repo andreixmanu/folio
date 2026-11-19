@@ -833,7 +833,7 @@ async function callUpstream(env: Env, accessToken: string, req: ChatRequest, dep
 }
 
 export async function handleChat(env: Env, tokenHeader: string, rawBody: string, deps: ChatDeps = {}): Promise<Response> {
-  const denied = requireAppToken(env, tokenHeader);
+  const denied = await requireAppToken(env, tokenHeader);
   if (denied) return denied;
 
   const parsed = parseChatBody(rawBody);

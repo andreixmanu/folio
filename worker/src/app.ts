@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
-import { requireAppToken } from "./auth";
+import { handlePair, requireAppToken } from "./auth";
 import { registerBankRoutes, type BankDeps } from "./banking/routes";
 import { TtlCache } from "./cache";
 import { handleChat } from "./chat";
@@ -105,6 +105,7 @@ export function createApp(deps: AppDeps = {}) {
         "/wallets",
         "/positions",
         "/bank/*",
+        "/auth/pair",
       ],
     }),
   );
@@ -289,6 +290,17 @@ export function createApp(deps: AppDeps = {}) {
     });
   });
 
+  /** POST /auth/pair { code } — exchange the pairing secret for a device token. No app token yet. */
+  app.post("/auth/pair", async (c) => {
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "invalid_body" }, 400);
+    }
+    return handlePair(c.env, body);
+  });
+
   /** POST /chat — markets assistant. Auth and upstream calls are injectable via `deps`. */
   app.post("/chat", async (c) => {
     const raw = await c.req.text();
@@ -301,7 +313,7 @@ export function createApp(deps: AppDeps = {}) {
 
   /** GET /wallets — read-only Tangem balances. Auth matches `/chat`; never returns addresses. */
   app.get("/wallets", async (c) => {
-    const denied = requireAppToken(c.env, c.req.header("X-Folio-Token") ?? "");
+    const denied = await requireAppToken(c.env, c.req.header("X-Folio-Token") ?? "");
     if (denied) return denied;
     const body = await getWalletsResponse({
       env: c.env,
@@ -319,7 +331,7 @@ export function createApp(deps: AppDeps = {}) {
 
   /** GET /positions — IBKR open positions from the Flex Web Service (read-only, cached ~8h). */
   app.get("/positions", async (c) => {
-    const denied = requireAppToken(c.env, c.req.header("X-Folio-Token") ?? "");
+    const denied = await requireAppToken(c.env, c.req.header("X-Folio-Token") ?? "");
     if (denied) return denied;
     try {
       const body = await getPositions(c.env, {

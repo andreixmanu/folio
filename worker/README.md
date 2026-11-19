@@ -47,7 +47,17 @@ so Expo Go reaches the Worker through the same tunnel as Metro.
 
 ## Assistente (xAI)
 
-The Worker calls xAI with a refresh token stored in KV. The app authenticates to the Worker with `APP_CHAT_TOKEN` (header `X-Folio-Token`) on `/chat` and `/wallets`. The OAuth client is public: there is no client secret.
+The Worker calls xAI with a refresh token stored in KV. `/chat`, `/wallets`, `/positions` and `/bank/*` require `X-Folio-Token`. A paired device token (SHA-256 in the `XAI_AUTH` KV) is accepted. The static `APP_CHAT_TOKEN` is still accepted until `ALLOW_STATIC_APP_TOKEN` is `0`. The OAuth client is public: there is no client secret.
+
+Pairing, after the Worker code is deployed (Andrei runs the deploy):
+
+```bash
+npx wrangler secret put APP_PAIRING_CODE          # 8+ random characters; do not commit it
+# Ship the app JS (build or update). Then in Impostazioni → Questo dispositivo, enter the code.
+npx wrangler secret put ALLOW_STATIC_APP_TOKEN    # value: 0   only after the phone says Collegato
+```
+
+No D1 migration. The installed app keeps working on the static token until that last secret is `0`.
 
 ```bash
 cp .dev.vars.example .dev.vars   # set APP_CHAT_TOKEN; `.dev.vars` is gitignored

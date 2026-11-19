@@ -39,6 +39,7 @@ export { default as Heart } from 'lucide-react-native/icons/heart';
 export { default as HeartPulse } from 'lucide-react-native/icons/heart-pulse';
 export { default as House } from 'lucide-react-native/icons/house';
 export { default as Info } from 'lucide-react-native/icons/info';
+export { default as KeyRound } from 'lucide-react-native/icons/key-round';
 export { default as Landmark } from 'lucide-react-native/icons/landmark';
 export { default as LayoutDashboard } from 'lucide-react-native/icons/layout-dashboard';
 export { default as Minus } from 'lucide-react-native/icons/minus';

@@ -8,6 +8,7 @@
  */
 
 import { resolveApiBaseUrl } from '@/services/api/config';
+import { getAppToken } from '@/services/auth/token';
 
 import { createMockBudgetData } from './mock-data';
 import { createRemoteBudgetSource } from './remote-data-source';
@@ -89,15 +90,15 @@ export function createMockBudgetSource(
 export function selectBudgetSource(env: {
   source?: string;
   apiUrl?: () => string | null;
-  token?: string;
+  token?: string | (() => Promise<string>);
 }): BudgetDataSource {
   const apiUrl = env.source === 'remote' ? env.apiUrl?.() : null;
-  if (apiUrl) return createRemoteBudgetSource({ baseUrl: apiUrl, token: env.token ?? '' });
+  if (apiUrl) return createRemoteBudgetSource({ baseUrl: apiUrl, token: env.token ?? getAppToken });
   return createMockBudgetSource();
 }
 
 export const budgetSource: BudgetDataSource = selectBudgetSource({
   source: process.env.EXPO_PUBLIC_BUDGET_SOURCE,
   apiUrl: resolveApiBaseUrl,
-  token: process.env.EXPO_PUBLIC_CHAT_TOKEN,
+  token: getAppToken,
 });

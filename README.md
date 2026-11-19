@@ -58,7 +58,7 @@ are left out of that payload. The Worker currently requires those numbers, so a 
 turn is rejected as `invalid_body` until the check allows a weights-only portfolio.
 
 - `EXPO_PUBLIC_API_URL` — Worker base URL, or the Expo `/api` proxy in dev (see `.env.example`).
-- `EXPO_PUBLIC_CHAT_TOKEN` — must match `APP_CHAT_TOKEN` in `worker/.dev.vars` (`/chat` and `/wallets`).
+- `EXPO_PUBLIC_CHAT_TOKEN` — legacy static token. It still matches `APP_CHAT_TOKEN` until a device is paired. Impostazioni → «Questo dispositivo» exchanges `APP_PAIRING_CODE` for a token kept in AsyncStorage (the 0.2.0 binary does not include `expo-secure-store`).
 
 ```bash
 cd worker

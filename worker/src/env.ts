@@ -1,6 +1,13 @@
 export type Env = {
   XAI_AUTH: KVNamespace;
   APP_CHAT_TOKEN?: string;
+  /**
+   * One-time code typed in Impostazioni. Worker secret, at least 8 characters.
+   * `POST /auth/pair` exchanges it for a device token. Never log it.
+   */
+  APP_PAIRING_CODE?: string;
+  /** `"0"` rejects `APP_CHAT_TOKEN`. Unset still accepts it so the installed app keeps working. */
+  ALLOW_STATIC_APP_TOKEN?: string;
   XAI_MODEL?: string;
   XAI_SEARCH_TOOLS?: string;
   /** Set to `"1"` to log upstream SSE event type names. Off unless exactly `"1"`. */

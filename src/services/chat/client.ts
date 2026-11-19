@@ -1,6 +1,7 @@
 import { fetch as expoFetch } from 'expo/fetch';
 
 import { resolveApiBaseUrl } from '@/services/api/config';
+import { getAppToken } from '@/services/auth/token';
 
 import type { ChatPortfolio } from './context';
 
@@ -214,6 +215,8 @@ export async function streamChat({
   if (signal?.aborted) return;
   const base = resolveApiBaseUrl();
   if (!base) throw new ChatError('network', NETWORK_MESSAGE);
+  const token = await getAppToken();
+  if (signal?.aborted) return;
 
   let res: Awaited<ReturnType<typeof expoFetch>>;
   try {
@@ -223,7 +226,7 @@ export async function streamChat({
       headers: {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
-        'X-Folio-Token': process.env.EXPO_PUBLIC_CHAT_TOKEN ?? '',
+        'X-Folio-Token': token,
       },
       body: JSON.stringify(portfolio ? { messages, portfolio } : { messages }),
     });

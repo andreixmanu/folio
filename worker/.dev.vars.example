@@ -3,6 +3,11 @@
 # This is not an xAI key. Do not commit `.dev.vars`.
 APP_CHAT_TOKEN=change-me-local-dev-token
 
+# One-time code typed in Impostazioni. At least 8 characters. Do not commit a real value.
+# APP_PAIRING_CODE=
+# Set to 0 only after this phone shows "Collegato". Until then the static token still works.
+# ALLOW_STATIC_APP_TOKEN=1
+
 # Public Tangem receive addresses (read-only). Never logged or returned by the Worker.
 BTC_ADDRESS=
 ETH_ADDRESS=

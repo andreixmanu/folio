@@ -1,3 +1,4 @@
+import { getAppToken } from '../auth/token';
 import { ApiError, getJson } from '../api/client';
 import { resolveApiBaseUrl } from '../api/config';
 import type { Position } from '../types';
@@ -33,7 +34,7 @@ export async function fetchWallets(signal?: AbortSignal): Promise<WalletsRespons
   if (!base) throw new ApiError('API non configurata (EXPO_PUBLIC_API_URL)');
   return getJson<WalletsResponse>(`${base}/wallets`, {
     signal,
-    headers: { 'X-Folio-Token': process.env.EXPO_PUBLIC_CHAT_TOKEN ?? '' },
+    headers: { 'X-Folio-Token': await getAppToken() },
   });
 }
 

@@ -5,20 +5,22 @@ import {
   Contrast,
   EyeOff,
   Info,
+  KeyRound,
   Landmark,
   Rss,
   Sparkles,
   Wallet,
   type LucideIcon,
 } from '@/components/ui/icons';
-import { Fragment } from 'react';
-import { Switch, View } from 'react-native';
+import { Fragment, useEffect, useState } from 'react';
+import { Switch, TextInput, View } from 'react-native';
 
 import {
   AppText,
   IconBadge,
   IslandCard,
   ListRow,
+  PressableScale,
   RowSeparator,
   Screen,
   ScreenHeader,
@@ -26,6 +28,7 @@ import {
   SegmentedControl,
 } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
+import { pairDevice, readDeviceToken } from '@/services/auth/token';
 import { useUiStore, type ThemeMode } from '@/store/ui-store';
 import { useTheme } from '@/theme';
 
@@ -66,6 +69,85 @@ function SoonBadge({ live = false }: { live?: boolean }) {
         {live ? 'LIVE' : 'PRESTO'}
       </AppText>
     </View>
+  );
+}
+
+function DevicePairing() {
+  const theme = useTheme();
+  const [code, setCode] = useState('');
+  const [paired, setPaired] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void readDeviceToken().then((token) => setPaired(token !== null));
+  }, []);
+
+  async function submit() {
+    if (busy) return;
+    if (code.trim().length < 8) {
+      setNote('Inserisci il codice');
+      return;
+    }
+    setBusy(true);
+    setNote(null);
+    try {
+      await pairDevice(code);
+      setCode('');
+      setPaired(true);
+      setNote('Collegato');
+    } catch (error) {
+      setNote(error instanceof Error ? error.message : 'Accoppiamento non disponibile');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <ListRow
+        leading={<IconBadge icon={KeyRound} color={theme.colors.accent} />}
+        title="Questo dispositivo"
+        subtitle={paired ? 'Collegato. Un nuovo codice sostituisce il token.' : 'Codice di accoppiamento, una volta'}
+      />
+      <RowSeparator />
+      <View style={{ paddingVertical: 8, gap: 8 }}>
+        <TextInput
+          testID="pairing-code"
+          value={code}
+          onChangeText={setCode}
+          autoCapitalize="none"
+          autoCorrect={false}
+          secureTextEntry
+          placeholder="Codice"
+          placeholderTextColor={theme.colors.textTertiary}
+          accessibilityLabel="Codice di accoppiamento"
+          style={{
+            minHeight: 44,
+            paddingHorizontal: theme.spacing.md,
+            borderRadius: theme.radii.lg,
+            backgroundColor: theme.colors.surfaceMuted,
+            color: theme.colors.text,
+            fontSize: 16,
+          }}
+        />
+        <PressableScale
+          testID="pairing-submit"
+          accessibilityLabel="Collega dispositivo"
+          disabled={busy}
+          onPress={() => void submit()}
+          style={{ alignSelf: 'flex-start' }}>
+          <AppText variant="bodyStrong" color="accent">
+            {busy ? 'Collego…' : 'Collega'}
+          </AppText>
+        </PressableScale>
+        {note ? (
+          <AppText variant="caption" color={note === 'Collegato' ? 'positive' : 'negative'} testID="pairing-note">
+            {note}
+          </AppText>
+        ) : null}
+      </View>
+    </>
   );
 }
 
@@ -137,6 +219,8 @@ export function SettingsScreen() {
             />
           }
         />
+        <RowSeparator />
+        <DevicePairing />
         <RowSeparator />
         <ListRow
           leading={<IconBadge icon={Info} color={theme.colors.textSecondary} />}
