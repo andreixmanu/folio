@@ -27,6 +27,8 @@ export const timings = {
   indicator: { duration: 220, easing: easeOut } satisfies WithTimingConfig,
   /** Color / opacity changes. */
   fade: { duration: 180, easing: standard } satisfies WithTimingConfig,
+  /** Portfolio chart reveal on first paint and on a range change. */
+  chart: { duration: 220, easing: standard } satisfies WithTimingConfig,
   /** Total value counter. */
   counter: { duration: 600, easing: easeOut } satisfies WithTimingConfig,
 } as const;

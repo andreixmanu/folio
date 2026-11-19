@@ -3,6 +3,7 @@ import { useState } from "react";
 import { View } from "react-native";
 
 import { ValueChart } from "@/components/charts/value-chart";
+import { timings } from "@/theme";
 import { downsampleLttb } from "@/lib/downsample";
 import { buildValueHistory } from "@/services/portfolio";
 import { RANGE_SPECS } from "@/services/ranges";
@@ -14,12 +15,24 @@ import type {
 } from "@/services/types";
 import { renderWithProviders } from "../test/test-utils";
 
-const lineChartCalls: { points: number }[] = [];
+const lineChartCalls: {
+  points: number;
+  isAnimated?: boolean;
+  animateOnDataChange?: boolean;
+}[] = [];
 let lastPoints = 0;
 jest.mock("react-native-gifted-charts", () => ({
-  LineChart: (props: { data: unknown[] }) => {
+  LineChart: (props: {
+    data: unknown[];
+    isAnimated?: boolean;
+    animateOnDataChange?: boolean;
+  }) => {
     lastPoints = props.data.length;
-    lineChartCalls.push({ points: props.data.length });
+    lineChartCalls.push({
+      points: props.data.length,
+      isAnimated: props.isAnimated,
+      animateOnDataChange: props.animateOnDataChange,
+    });
     return null;
   },
 }));
@@ -102,6 +115,12 @@ test("chart does not re-render when the parent re-renders with the same props", 
       .getByTestId("value-chart")
       .props.onLayout({ nativeEvent: { layout: { width: 360 } } });
   });
+  expect(lineChartCalls.at(-1)).toMatchObject({
+    isAnimated: false,
+    animateOnDataChange: false,
+  });
+  expect(timings.chart.duration).toBeGreaterThanOrEqual(200);
+  expect(timings.chart.duration).toBeLessThanOrEqual(250);
   lineChartCalls.length = 0;
   for (let i = 0; i < 5; i++) await act(async () => bump());
   console.log(

@@ -1,12 +1,18 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState, type ReactNode } from "react";
 import { View, type LayoutChangeEvent } from "react-native";
 import { LineChart, type lineDataItem } from "react-native-gifted-charts";
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
 import { AppText } from "@/components/ui/text";
 import { chartPointBudget, downsampleLttb } from "@/lib/downsample";
 import { formatChartDate, formatMoney, MASK } from "@/lib/format";
 import type { TimeRange, ValuePoint } from "@/services/types";
-import { useTheme } from "@/theme";
+import { timings, useTheme } from "@/theme";
 
 export type ValueChartProps = {
   points: ValuePoint[];
@@ -18,8 +24,39 @@ export type ValueChartProps = {
 };
 
 /**
+ * 220ms ease-out on first paint and when the range changes. Keyed by range so a live
+ * quote (same range, new last point) does not replay it. Gifted-charts' own draw is
+ * linear and restarts on data changes, so it stays off.
+ */
+function ChartFade({
+  range,
+  children,
+}: {
+  range: string;
+  children: ReactNode;
+}) {
+  const reduced = useReducedMotion() === true;
+  const opacity = useSharedValue(reduced ? 1 : 0);
+  useEffect(() => {
+    if (reduced) {
+      opacity.set(1);
+      return;
+    }
+    opacity.set(withTiming(1, timings.chart));
+  }, [opacity, reduced]);
+  const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
+  return (
+    <Animated.View key={range} style={[{ flex: 1 }, style]}>
+      {children}
+    </Animated.View>
+  );
+}
+
+/**
  * Area chart of portfolio value over time (react-native-gifted-charts + react-native-svg,
- * works in Expo Go and on web). Drag to scrub: a floating label shows value and date.
+ * works in Expo Go and on web). Drag to scrub: the label is that series point's euro
+ * value and date, not the shifted chart coordinate. The range chip stays on the
+ * first-to-last change; it does not follow the finger.
  */
 function ValueChartImpl({
   points: rawPoints,
@@ -108,37 +145,37 @@ function ValueChartImpl({
       testID="value-chart"
     >
       {width > 0 && data.length > 1 ? (
-        <LineChart
-          data={data}
-          width={width}
-          height={height}
-          maxValue={maxValue}
-          noOfSections={4}
-          spacing={spacing}
-          initialSpacing={0}
-          endSpacing={0}
-          areaChart
-          curved
-          curvature={0.12}
-          thickness={2.5}
-          color={color}
-          startFillColor={color}
-          endFillColor={color}
-          startOpacity={0.28}
-          endOpacity={0}
-          hideDataPoints
-          hideRules
-          hideYAxisText
-          yAxisLabelWidth={0}
-          yAxisThickness={0}
-          xAxisThickness={0}
-          disableScroll
-          isAnimated
-          animationDuration={900}
-          animateOnDataChange
-          onDataChangeAnimationDuration={450}
-          pointerConfig={pointerConfig}
-        />
+        <ChartFade key={range} range={range}>
+          <LineChart
+            data={data}
+            width={width}
+            height={height}
+            maxValue={maxValue}
+            noOfSections={4}
+            spacing={spacing}
+            initialSpacing={0}
+            endSpacing={0}
+            areaChart
+            curved
+            curvature={0.12}
+            thickness={2.5}
+            color={color}
+            startFillColor={color}
+            endFillColor={color}
+            startOpacity={0.28}
+            endOpacity={0}
+            hideDataPoints
+            hideRules
+            hideYAxisText
+            yAxisLabelWidth={0}
+            yAxisThickness={0}
+            xAxisThickness={0}
+            disableScroll
+            isAnimated={false}
+            animateOnDataChange={false}
+            pointerConfig={pointerConfig}
+          />
+        </ChartFade>
       ) : null}
     </View>
   );
