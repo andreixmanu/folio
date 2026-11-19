@@ -24,10 +24,17 @@ export function logoUrl(symbol: string): string {
 export type LogoResult = { body: ArrayBuffer; contentType: string } | null;
 export type BinaryFetcher = (url: string) => Promise<LogoResult>;
 
+/** Larger than any real mark, small enough to keep out of the isolate cache. */
+const MAX_LOGO_BYTES = 512 * 1024;
+
 export const defaultFetchLogo: BinaryFetcher = async (url) => {
   const res = await fetch(url, { headers: { 'User-Agent': 'folio-worker/0.1' } });
   const type = res.headers.get('content-type') ?? '';
   if (res.status === 404 || (res.ok && !type.startsWith('image/'))) return null;
   if (!res.ok) throw new Error(`Logo upstream HTTP ${res.status}`);
-  return { body: await res.arrayBuffer(), contentType: type };
+  const declared = Number(res.headers.get('content-length') ?? '');
+  if (Number.isFinite(declared) && declared > MAX_LOGO_BYTES) return null;
+  const body = await res.arrayBuffer();
+  if (body.byteLength > MAX_LOGO_BYTES) return null;
+  return { body, contentType: type };
 };

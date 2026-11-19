@@ -19,6 +19,14 @@ export class TtlCache {
     return value;
   }
 
+  /** Pull an entry's expiry forward. Later calls do not extend it. */
+  shorten(key: string, ttlMs: number): void {
+    const entry = this.store.get(key);
+    if (!entry) return;
+    const cap = this.now() + ttlMs;
+    if (entry.expires > cap) entry.expires = cap;
+  }
+
   private prune() {
     const now = this.now();
     for (const [k, v] of this.store) if (v.expires <= now) this.store.delete(k);

@@ -278,6 +278,8 @@ export function createApp(deps: AppDeps = {}) {
       fetchLogo(logoUrl(symbol)),
     );
     if (!logo) {
+      // The get() above stored the miss for a week. A missing logo should expire in a day.
+      cache.shorten(`logo:${symbol}`, LOGO_MISS_TTL_SEC * 1000);
       c.header("Cache-Control", `public, max-age=${LOGO_MISS_TTL_SEC}`);
       return c.json({ error: `No logo for ${symbol}` }, 404);
     }

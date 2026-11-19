@@ -39,5 +39,21 @@ describe('edge cache skip', () => {
     match.mockClear();
     await handler.fetch(new Request('https://example.com/health'), envOf(), ctx);
     expect(match).toHaveBeenCalled();
+
+    match.mockClear();
+    put.mockClear();
+    await handler.fetch(new Request('https://example.com/positions'), envOf(), ctx);
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+
+    match.mockClear();
+    put.mockClear();
+    await handler.fetch(
+      new Request('https://example.com/positions', { headers: { 'X-Folio-Token': APP_TOKEN } }),
+      envOf(),
+      ctx,
+    );
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
   });
 });
