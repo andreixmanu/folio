@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, SectionList, StyleSheet, TextInput, View } from 'react-native';
+import { RefreshControl, ScrollView, SectionList, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -122,6 +122,7 @@ export default function TransactionsScreen() {
   const accounts = accountsQuery.data ?? [];
   const categoryCount = filters.categoryIds.length;
   const categoryLabel = categoryCount > 0 ? `Categorie · ${categoryCount}` : 'Categorie';
+  const topPad = insets.top + theme.spacing.xs;
   const bottomPadding =
     theme.layout.tabBarHeight + theme.layout.tabBarBottomGap + insets.bottom + theme.spacing.lg;
 
@@ -145,9 +146,6 @@ export default function TransactionsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }} testID="budget-transactions-screen">
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <AmbientBackground />
-      </View>
       <SectionList<Transaction, MovementSection>
         style={{
           flex: 1,
@@ -168,9 +166,7 @@ export default function TransactionsScreen() {
         extraData={masked}
         contentContainerStyle={{
           flexGrow: 1,
-          paddingTop: insets.top + theme.spacing.xs,
           paddingBottom: bottomPadding,
-          paddingHorizontal: theme.layout.screenPadding,
         }}
         refreshControl={
           <RefreshControl
@@ -183,89 +179,102 @@ export default function TransactionsScreen() {
           />
         }
         ListHeaderComponent={
-          <View style={{ gap: theme.spacing.md, marginBottom: theme.spacing.xs }}>
-            <ScreenHeader title="Movimenti" />
+          <View style={{ marginBottom: theme.spacing.xs }}>
+            {/* Fills the header, including the status-bar pad, and scrolls away with it. */}
+            <View
+              pointerEvents="none"
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }}>
+              <AmbientBackground />
+            </View>
             <View
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: theme.spacing.sm,
-                height: 40,
-                paddingHorizontal: theme.spacing.md,
-                borderRadius: theme.radii.pill,
-                backgroundColor: theme.scheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.72)',
-                borderWidth: 1,
-                borderColor: theme.colors.border,
+                paddingTop: topPad,
+                paddingHorizontal: theme.layout.screenPadding,
+                gap: theme.spacing.md,
               }}>
-              <Icon icon={Search} size={16} color={theme.colors.textTertiary} />
-              <TextInput
-                testID="tx-search"
-                value={filters.query}
-                onChangeText={(query) => setFilters((current) => ({ ...current, query }))}
-                placeholder="Cerca esercente o causale"
-                placeholderTextColor={theme.colors.textTertiary}
-                autoCorrect={false}
-                autoCapitalize="none"
-                returnKeyType="search"
+              <ScreenHeader title="Movimenti" />
+              <View
                 style={{
-                  flex: 1,
-                  paddingVertical: 0,
-                  color: theme.colors.text,
-                  fontFamily: theme.typography.body.fontFamily,
-                  fontSize: theme.typography.body.fontSize,
-                }}
-              />
-              {filters.query.length > 0 ? (
-                <PressableScale
-                  haptic="selection"
-                  accessibilityLabel="Cancella ricerca"
-                  hitSlop={8}
-                  onPress={() => setFilters((current) => ({ ...current, query: '' }))}>
-                  <Icon icon={X} size={16} color={theme.colors.textSecondary} />
-                </PressableScale>
-              ) : null}
-            </View>
-            <ScrollView
-              horizontal
-              nestedScrollEnabled
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ gap: theme.spacing.sm, paddingVertical: 2 }}>
-              <FilterChip
-                label="Tutti"
-                selected={filters.direction === 'all'}
-                onPress={() => setFilters((current) => ({ ...current, direction: 'all' }))}
-                testID="dir-all"
-              />
-              <FilterChip
-                label="Entrate"
-                selected={filters.direction === 'in'}
-                onPress={() => setFilters((current) => ({ ...current, direction: 'in' }))}
-                testID="dir-in"
-              />
-              <FilterChip
-                label="Uscite"
-                selected={filters.direction === 'out'}
-                onPress={() => setFilters((current) => ({ ...current, direction: 'out' }))}
-                testID="dir-out"
-              />
-              {accounts.map((account) => (
-                <FilterChip
-                  key={account.id}
-                  label={account.name}
-                  selected={filters.accountIds.includes(account.id)}
-                  onPress={() => toggleAccount(account.id)}
-                  testID={`acct-${account.id}`}
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: theme.spacing.sm,
+                  height: 40,
+                  paddingHorizontal: theme.spacing.md,
+                  borderRadius: theme.radii.pill,
+                  backgroundColor: theme.scheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.72)',
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                }}>
+                <Icon icon={Search} size={16} color={theme.colors.textTertiary} />
+                <TextInput
+                  testID="tx-search"
+                  value={filters.query}
+                  onChangeText={(query) => setFilters((current) => ({ ...current, query }))}
+                  placeholder="Cerca esercente o causale"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  returnKeyType="search"
+                  style={{
+                    flex: 1,
+                    paddingVertical: 0,
+                    color: theme.colors.text,
+                    fontFamily: theme.typography.body.fontFamily,
+                    fontSize: theme.typography.body.fontSize,
+                  }}
                 />
-              ))}
-              <FilterChip
-                label={categoryLabel}
-                selected={categoryCount > 0}
-                onPress={() => setCategoriesOpen(true)}
-                testID="cat-filter"
-                icon
-              />
-            </ScrollView>
+                {filters.query.length > 0 ? (
+                  <PressableScale
+                    haptic="selection"
+                    accessibilityLabel="Cancella ricerca"
+                    hitSlop={8}
+                    onPress={() => setFilters((current) => ({ ...current, query: '' }))}>
+                    <Icon icon={X} size={16} color={theme.colors.textSecondary} />
+                  </PressableScale>
+                ) : null}
+              </View>
+              <ScrollView
+                horizontal
+                nestedScrollEnabled
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ gap: theme.spacing.sm, paddingVertical: 2 }}>
+                <FilterChip
+                  label="Tutti"
+                  selected={filters.direction === 'all'}
+                  onPress={() => setFilters((current) => ({ ...current, direction: 'all' }))}
+                  testID="dir-all"
+                />
+                <FilterChip
+                  label="Entrate"
+                  selected={filters.direction === 'in'}
+                  onPress={() => setFilters((current) => ({ ...current, direction: 'in' }))}
+                  testID="dir-in"
+                />
+                <FilterChip
+                  label="Uscite"
+                  selected={filters.direction === 'out'}
+                  onPress={() => setFilters((current) => ({ ...current, direction: 'out' }))}
+                  testID="dir-out"
+                />
+                {accounts.map((account) => (
+                  <FilterChip
+                    key={account.id}
+                    label={account.name}
+                    selected={filters.accountIds.includes(account.id)}
+                    onPress={() => toggleAccount(account.id)}
+                    testID={`acct-${account.id}`}
+                  />
+                ))}
+                <FilterChip
+                  label={categoryLabel}
+                  selected={categoryCount > 0}
+                  onPress={() => setCategoriesOpen(true)}
+                  testID="cat-filter"
+                  icon
+                />
+              </ScrollView>
+            </View>
           </View>
         }
         renderSectionHeader={({ section }) => (
@@ -277,6 +286,7 @@ export default function TransactionsScreen() {
               justifyContent: 'space-between',
               paddingTop: theme.spacing.md,
               paddingBottom: theme.spacing.sm,
+              paddingHorizontal: theme.layout.screenPadding,
               backgroundColor: 'transparent',
             }}>
             <AppText variant="label" color="textSecondary">
@@ -286,7 +296,7 @@ export default function TransactionsScreen() {
           </View>
         )}
         renderItem={({ item, index }) => (
-          <View>
+          <View style={{ paddingHorizontal: theme.layout.screenPadding }}>
             {index > 0 ? <RowSeparator inset={0} /> : null}
             <TransactionRow
               tx={item}
@@ -300,17 +310,27 @@ export default function TransactionsScreen() {
         ListEmptyComponent={
           transactions == null ? (
             transactionsQuery.isError ? (
-              <ErrorState
-                title="Movimenti non disponibili"
-                message="Non riesco a leggere i movimenti. Riprova tra un momento."
-                onRetry={retry}
-                testID="budget-transactions-error"
-              />
+              <View style={{ paddingHorizontal: theme.layout.screenPadding }}>
+                <ErrorState
+                  title="Movimenti non disponibili"
+                  message="Non riesco a leggere i movimenti. Riprova tra un momento."
+                  onRetry={retry}
+                  testID="budget-transactions-error"
+                />
+              </View>
             ) : (
-              <LoadingRows />
+              <View style={{ paddingHorizontal: theme.layout.screenPadding }}>
+                <LoadingRows />
+              </View>
             )
           ) : (
-            <View style={{ alignItems: 'center', gap: theme.spacing.sm, paddingVertical: theme.spacing.xxl }}>
+            <View
+              style={{
+                alignItems: 'center',
+                gap: theme.spacing.sm,
+                paddingVertical: theme.spacing.xxl,
+                paddingHorizontal: theme.layout.screenPadding,
+              }}>
               <AppText variant="headline">
                 {hasActiveFilters(filters) ? 'Nessun risultato' : 'Nessun movimento'}
               </AppText>

@@ -10,22 +10,28 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/theme';
 
-import { AmbientBackground } from './hero-glow';
+import { AmbientBackground, heroWashHeight, type HeroWash } from './hero-glow';
 
 export type ScreenProps = {
   children: ReactNode;
   refreshing?: boolean;
   onRefresh?: () => void;
   testID?: string;
+  /**
+   * How tall the accent wash is. `chart` covers the portfolio balance and chart,
+   * `summary` the budget balance, `title` only the large title. It scrolls away
+   * with that block; everything under it is the plain theme background.
+   */
+  hero?: HeroWash;
 };
 
 /**
  * Scrollable screen on the Seamless canvas.
- * The ambient wash is inside the scroll content, so the blooms travel with the
- * page the way they do in the full-height mockup. A scrim fades in behind the
- * status bar once the title scrolls under it.
+ * The accent wash sits only behind the top hero and scrolls away with it, so
+ * the sections below rest on the plain theme background. A scrim fades in
+ * behind the status bar once the title scrolls under it.
  */
-export function Screen({ children, refreshing = false, onRefresh, testID }: ScreenProps) {
+export function Screen({ children, refreshing = false, onRefresh, testID, hero = 'title' }: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -42,6 +48,7 @@ export function Screen({ children, refreshing = false, onRefresh, testID }: Scre
   const topPad = insets.top + theme.spacing.xs;
   const bottomPad =
     theme.layout.tabBarHeight + theme.layout.tabBarBottomGap + insets.bottom + theme.spacing.lg;
+  const washHeight = heroWashHeight(topPad, hero);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }} testID={testID}>
@@ -71,7 +78,7 @@ export function Screen({ children, refreshing = false, onRefresh, testID }: Scre
             />
           ) : undefined
         }>
-        {/* Bleed through the scroll padding so the wash reaches the screen edges. */}
+        {/* Bleed through the scroll padding so the hero wash reaches the screen edges. */}
         <View
           pointerEvents="none"
           style={{
@@ -79,7 +86,7 @@ export function Screen({ children, refreshing = false, onRefresh, testID }: Scre
             top: -topPad,
             left: -theme.layout.screenPadding,
             right: -theme.layout.screenPadding,
-            bottom: -bottomPad,
+            height: washHeight,
             overflow: 'hidden',
           }}>
           <AmbientBackground />

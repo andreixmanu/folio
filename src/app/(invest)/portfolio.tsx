@@ -37,6 +37,7 @@ export default function PortfolioScreen() {
   return (
     <Screen
       testID="portfolio-screen"
+      hero="chart"
       refreshing={portfolio.isRefetching}
       onRefresh={() => void portfolio.refetch()}>
       <ScreenHeader

@@ -103,6 +103,7 @@ export default function OverviewScreen() {
   return (
     <Screen
       testID="budget-overview-screen"
+      hero="summary"
       refreshing={refreshing}
       onRefresh={retry}>
       <ScreenHeader title="Panoramica" />

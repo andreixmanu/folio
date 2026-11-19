@@ -1,6 +1,6 @@
 import { SquarePen } from '@/components/ui/icons';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import Animated, {
   useAnimatedKeyboard,
   useAnimatedReaction,
@@ -11,7 +11,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AmbientBackground, AppText, IconButton, ScreenHeader } from '@/components/ui';
+import { AmbientBackground, AppText, IconButton, ScreenHeader, headerWashHeight } from '@/components/ui';
 import { Composer } from '@/features/assistant/composer';
 import { MessageList } from '@/features/assistant/messages';
 import { Suggestions } from '@/features/assistant/suggestions';
@@ -152,7 +152,17 @@ export default function AssistantScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }} testID="assistant-screen">
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      {/* Fixed behind the title. The accent is gone where the thread starts, so messages stay untinted. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: headerWashHeight(insets.top),
+          overflow: 'hidden',
+        }}>
         <AmbientBackground />
       </View>
       {Platform.OS === 'android' ? (
