@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -28,7 +29,7 @@ const RANGE_CAPTION: Record<TimeRange, string> = {
 
 const CHART_HEIGHT = 148;
 
-export function PortfolioHero({
+function PortfolioHeroImpl({
   totalValue,
   status,
   pricesUpdatedAt,
@@ -118,3 +119,5 @@ export function PortfolioHero({
     </Animated.View>
   );
 }
+
+export const PortfolioHero = memo(PortfolioHeroImpl);

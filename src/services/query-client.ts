@@ -5,7 +5,7 @@ import { AppState, Platform, type AppStateStatus } from 'react-native';
 export function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: 1, refetchOnWindowFocus: true },
+      queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 15_000 },
     },
   });
 }
