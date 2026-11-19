@@ -2,7 +2,7 @@
 
 Personal investment portfolio app (Android + web), built with Expo SDK 58, Expo Router and TypeScript (strict).
 
-**Phase 1:** UI foundations with typed mock IBKR stocks, live read-only Tangem crypto balances, and live finance/crypto headlines via the Cloudflare Worker. Later phases connect IBKR Flex Query.
+**Phase 1:** UI foundations with IBKR Flex stocks (read-only), live read-only Tangem crypto balances, and live finance/crypto headlines via the Cloudflare Worker.
 
 ## Scripts
 
@@ -46,7 +46,7 @@ The Notizie tab reads `GET /news` (optional `category=mercati|crypto|italia`). T
 
 ## Wallets (Tangem)
 
-Crypto holdings come from `GET /wallets` on the Worker (Bitcoin + Ethereum + USDC/USDT). The app sends `X-Folio-Token` and never displays receive addresses. Stocks stay on the IBKR mock. Pull-to-refresh on Portafoglio reloads wallets and quotes.
+Crypto holdings come from `GET /wallets` on the Worker (Bitcoin + Ethereum + USDC/USDT). The app sends `X-Folio-Token` and never displays receive addresses. Stocks come from `GET /positions` (IBKR Flex, end-of-day marks). Pull-to-refresh on Portafoglio reloads wallets, positions and quotes.
 
 ## Assistente
 

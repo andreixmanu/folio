@@ -3,7 +3,6 @@ import {
   formatMoneyParts,
   formatPercent,
   formatQuantity,
-  formatRelativeTime,
   formatRelativeTimeIt,
 } from '@/lib/format';
 
@@ -46,13 +45,6 @@ describe('format', () => {
   test('formatQuantity adapts precision', () => {
     expect(formatQuantity(0.4215)).toBe('0,4215');
     expect(formatQuantity(2400)).toBe('2.400');
-  });
-
-  test('formatRelativeTime', () => {
-    const now = new Date('2026-01-01T12:00:00Z');
-    expect(formatRelativeTime('2026-01-01T11:48:00Z', now)).toBe('12 min fa');
-    expect(formatRelativeTime('2026-01-01T09:00:00Z', now)).toBe('3 h fa');
-    expect(formatRelativeTime('2025-12-30T12:00:00Z', now)).toBe('2 g fa');
   });
 
   test('formatRelativeTimeIt', () => {

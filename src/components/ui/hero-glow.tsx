@@ -297,6 +297,3 @@ export function AmbientBackground() {
     </View>
   );
 }
-
-/** @deprecated Use AmbientBackground. Kept so older imports still resolve. */
-export const HeroGlow = AmbientBackground;

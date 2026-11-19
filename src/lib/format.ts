@@ -141,18 +141,6 @@ export function formatRelativeTimeIt(date: Date | string | number, now: Date | s
   return `${days} g fa`;
 }
 
-/** Short relative time in Italian: `ora`, `5 min fa`, `3 h fa`, `2 g fa`. */
-export function formatRelativeTime(iso: string, now: Date = new Date()): string {
-  const diffMs = now.getTime() - new Date(iso).getTime();
-  const minutes = Math.max(0, Math.round(diffMs / 60_000));
-  if (minutes < 1) return 'ora';
-  if (minutes < 60) return `${minutes} min fa`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} h fa`;
-  const days = Math.round(hours / 24);
-  return `${days} g fa`;
-}
-
 export function formatChartDate(timestamp: number, range: string): string {
   const d = new Date(timestamp);
   if (range === '1D') {
