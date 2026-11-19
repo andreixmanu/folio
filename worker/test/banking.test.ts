@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { createApp } from '../src/app';
 import { base64UrlDecode, base64UrlEncode } from '../src/banking/crypto';
 import { createEnableBankingProvider } from '../src/banking/enable-banking';
-import { dedupeById, mapEnableBankingTransactions, maskIban, stableAccountId, type EbTransaction } from '../src/banking/mapping';
+import { dedupeById, mapEnableBankingTransactions, maskIban, stableAccountId, withoutSupersededPending, type EbTransaction } from '../src/banking/mapping';
 import { createConsentState, verifyConsentState } from '../src/banking/state';
 import { MemoryBankStore } from '../src/banking/store';
 import type { BankProvider, BankTransaction } from '../src/banking/types';
@@ -115,8 +115,9 @@ describe('Enable Banking mapping', () => {
       remittanceInformation: 'POS 1234 Spesa',
       merchantCategoryCode: '5411',
       bankTransactionCode: 'PMNT-CCRD',
+      providerRefs: ['T1'],
     });
-    expect(rows[1]).toMatchObject({ id: 'acc:E2', amount: { amount: 1500 }, debtorName: 'ACME SRL' });
+    expect(rows[1]).toMatchObject({ id: 'acc:E2', amount: { amount: 1500 }, debtorName: 'ACME SRL', providerRefs: ['E2'] });
     expect(rows[2]?.status).toBe('pending');
     expect(rows[2]?.bookingDate).toBe('2026-11-12');
     expect(rows[2]?.id).toMatch(/^acc:h[0-9a-f]{24}$/);
@@ -148,6 +149,66 @@ describe('Enable Banking mapping', () => {
     expect(a).toMatch(/^revolut-[0-9a-f]{16}$/);
     expect(await stableAccountId('Revolut', 'hash-1')).toBe(a);
     expect(await stableAccountId('Isybank', 'hash-1')).toMatch(/^bank-/);
+  });
+});
+
+function movement(partial: Partial<BankTransaction> & Pick<BankTransaction, 'id' | 'status'>): BankTransaction {
+  return {
+    accountId: 'acc',
+    bookingDate: '2026-11-10',
+    amount: { amount: -12.5, currency: 'EUR' },
+    creditorName: 'Bar Centrale',
+    ...partial,
+  };
+}
+
+describe('pending versus booked', () => {
+  const hash = 'acc:h0123456789abcdef01234567';
+
+  test('a booked copy replaces one hash-id pending row on amount, window and description', () => {
+    const pending = movement({ id: hash, status: 'pending', bookingDate: '2026-11-08' });
+    const booked = movement({ id: 'acc:T9', status: 'booked', providerRefs: ['T9'] });
+    const other = movement({ id: 'acc:habcdef0123456789abcdef01', status: 'pending', bookingDate: '2026-11-08', creditorName: 'Other' });
+    expect(withoutSupersededPending([pending, other, booked]).map((row) => row.id)).toEqual([other.id, booked.id]);
+  });
+
+  test('shared entry reference matches even when the text changed; two booked coffees stay two', () => {
+    const pending = movement({ id: 'acc:E1', status: 'pending', providerRefs: ['E1'], remittanceInformation: 'auth' });
+    const booked = movement({
+      id: 'acc:T9',
+      status: 'booked',
+      providerRefs: ['T9', 'E1'],
+      remittanceInformation: 'settled',
+    });
+    const coffeeA = movement({ id: 'acc:C1', status: 'booked', creditorName: 'Cafe', amount: { amount: -1.2, currency: 'EUR' } });
+    const coffeeB = movement({ id: 'acc:C2', status: 'booked', creditorName: 'Cafe', amount: { amount: -1.2, currency: 'EUR' } });
+    expect(withoutSupersededPending([pending, booked, coffeeA, coffeeB]).map((row) => row.id)).toEqual([
+      booked.id,
+      coffeeA.id,
+      coffeeB.id,
+    ]);
+  });
+
+  test('a different bank id, a far date, a blank description or a second coffee is kept', () => {
+    const booked = movement({ id: 'acc:T9', status: 'booked', providerRefs: ['T9'] });
+    const otherId = movement({ id: 'acc:E2', status: 'pending', providerRefs: ['E2'] });
+    const far = movement({ id: hash, status: 'pending', bookingDate: '2026-11-01' });
+    const blank = movement({ id: 'acc:hfedcba9876543210fedcba98', status: 'pending', creditorName: undefined, debtorName: undefined });
+    expect(withoutSupersededPending([booked, otherId, far, blank]).map((row) => row.id)).toEqual([
+      booked.id,
+      otherId.id,
+      far.id,
+      blank.id,
+    ]);
+  });
+
+  test('the store drops a pending row already saved once the booked copy arrives', async () => {
+    const store = new MemoryBankStore();
+    const pending = movement({ id: hash, status: 'pending' });
+    await store.upsertTransactions([pending]);
+    await store.upsertTransactions([movement({ id: 'acc:T9', status: 'booked', providerRefs: ['T9'] })]);
+    const page = await store.listTransactions({ limit: 10 });
+    expect(page.transactions.map((row) => [row.id, row.status])).toEqual([['acc:T9', 'booked']]);
   });
 });
 

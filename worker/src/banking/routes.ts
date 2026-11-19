@@ -4,7 +4,7 @@ import { requireAppToken } from '../auth';
 import type { Env } from '../env';
 import { readBankConfig, type BankConfig } from './config';
 import { createEnableBankingProvider, type FetchLike } from './enable-banking';
-import { dedupeById, mapAccount, stableAccountId } from './mapping';
+import { dedupeById, mapAccount, stableAccountId, withoutSupersededPending } from './mapping';
 import { createConsentState, verifyConsentState } from './state';
 import { D1BankStore, type BankStore, type StoredAccount } from './store';
 import { BankProviderError, type BankProvider, type Institution } from './types';
@@ -77,8 +77,8 @@ export function registerBankRoutes(app: Hono<{ Bindings: Env }>, deps: BankDeps 
   let institutionsCache: { at: number; country: string; list: Institution[] } | null = null;
 
   /** Token gate, then config gate. Returns a Response to short-circuit. */
-  function gate(c: Ctx): { config: BankConfig } | Response {
-    const denied = requireAppToken(c.env, c.req.header('X-Folio-Token') ?? '');
+  async function gate(c: Ctx): Promise<{ config: BankConfig } | Response> {
+    const denied = await requireAppToken(c.env, c.req.header('X-Folio-Token') ?? '');
     if (denied) return denied;
     const cfg = readBankConfig(c.env);
     if (!cfg.ok) return notConfigured(c, cfg.missing);
@@ -94,8 +94,8 @@ export function registerBankRoutes(app: Hono<{ Bindings: Env }>, deps: BankDeps 
     return list;
   }
 
-  app.get('/bank/status', (c) => {
-    const denied = requireAppToken(c.env, c.req.header('X-Folio-Token') ?? '');
+  app.get('/bank/status', async (c) => {
+    const denied = await requireAppToken(c.env, c.req.header('X-Folio-Token') ?? '');
     if (denied) return denied;
     const cfg = readBankConfig(c.env);
     noStore(c);
@@ -104,7 +104,7 @@ export function registerBankRoutes(app: Hono<{ Bindings: Env }>, deps: BankDeps 
 
   /** GET /bank/institutions?country=IT&q=revolut */
   app.get('/bank/institutions', async (c) => {
-    const g = gate(c);
+    const g = await gate(c);
     if (g instanceof Response) return g;
     const country = (c.req.query('country') ?? 'IT').toUpperCase();
     if (!/^[A-Z]{2}$/.test(country)) return c.json({ error: 'Invalid country' }, 400);
@@ -120,7 +120,7 @@ export function registerBankRoutes(app: Hono<{ Bindings: Env }>, deps: BankDeps 
 
   /** POST /bank/consents { institution: { name, country }, psuType?, days?, returnTo? } -> { url } */
   app.post('/bank/consents', async (c) => {
-    const g = gate(c);
+    const g = await gate(c);
     if (g instanceof Response) return g;
     let body: { institution?: { name?: unknown; country?: unknown }; psuType?: unknown; days?: unknown; returnTo?: unknown };
     try {
@@ -213,7 +213,7 @@ export function registerBankRoutes(app: Hono<{ Bindings: Env }>, deps: BankDeps 
 
   /** GET /bank/accounts?refresh=1 — stored accounts; `refresh=1` re-reads balances. */
   app.get('/bank/accounts', async (c) => {
-    const g = gate(c);
+    const g = await gate(c);
     if (g instanceof Response) return g;
     const store = makeStore(g.config);
     let accounts = await store.listAccounts();
@@ -243,7 +243,7 @@ export function registerBankRoutes(app: Hono<{ Bindings: Env }>, deps: BankDeps 
    * One live provider page; rows are also saved (deduplicated by id).
    */
   app.get('/bank/accounts/:id/transactions', async (c) => {
-    const g = gate(c);
+    const g = await gate(c);
     if (g instanceof Response) return g;
     const from = c.req.query('from');
     const to = c.req.query('to');
@@ -258,7 +258,7 @@ export function registerBankRoutes(app: Hono<{ Bindings: Env }>, deps: BankDeps 
         ...(c.req.query('continuationKey') ? { continuationKey: c.req.query('continuationKey') } : {}),
         strategy: c.req.query('strategy') === 'longest' ? 'longest' : 'default',
       });
-      const rows = dedupeById(page.transactions);
+      const rows = withoutSupersededPending(dedupeById(page.transactions));
       const added = await store.upsertTransactions(rows, new Date(now()).toISOString());
       noStore(c);
       return c.json({ transactions: rows, continuationKey: page.continuationKey ?? null, added });
@@ -273,7 +273,7 @@ export function registerBankRoutes(app: Hono<{ Bindings: Env }>, deps: BankDeps 
    * synced day minus a small overlap. Resumable through the saved continuation key.
    */
   app.post('/bank/accounts/:id/sync', async (c) => {
-    const g = gate(c);
+    const g = await gate(c);
     if (g instanceof Response) return g;
     const store = makeStore(g.config);
     const account = await store.getAccount(c.req.param('id'));
@@ -294,7 +294,7 @@ export function registerBankRoutes(app: Hono<{ Bindings: Env }>, deps: BankDeps 
           ...(continuationKey ? { continuationKey } : {}),
           strategy: first ? 'longest' : 'default',
         });
-        const rows = dedupeById(page.transactions);
+        const rows = withoutSupersededPending(dedupeById(page.transactions));
         fetched += rows.length;
         added += await store.upsertTransactions(rows, new Date(now()).toISOString());
         for (const row of rows) if (row.status === 'booked' && (!latest || row.bookingDate > latest)) latest = row.bookingDate;
@@ -325,7 +325,7 @@ export function registerBankRoutes(app: Hono<{ Bindings: Env }>, deps: BankDeps 
 
   /** GET /bank/transactions?from&to&accountId&cursor&limit — saved rows, newest first. */
   app.get('/bank/transactions', async (c) => {
-    const g = gate(c);
+    const g = await gate(c);
     if (g instanceof Response) return g;
     const from = c.req.query('from');
     const to = c.req.query('to');

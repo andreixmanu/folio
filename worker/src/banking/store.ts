@@ -1,3 +1,4 @@
+import { PENDING_MATCH_DAYS, shiftIsoDay, supersededPendingIds } from './mapping';
 import type { BankAccount, BankTransaction } from './types';
 
 export type StoredAccount = BankAccount & { sessionId: string; providerAccountId: string };
@@ -199,7 +200,10 @@ export class D1BankStore implements BankStore {
 
   async upsertTransactions(rows: readonly BankTransaction[], nowIso: string): Promise<number> {
     if (rows.length === 0) return 0;
-    const ids = rows.map((r) => r.id);
+    const drop = await this.purgeSuperseded(rows);
+    const keep = rows.filter((row) => !drop.has(row.id));
+    if (keep.length === 0) return 0;
+    const ids = keep.map((r) => r.id);
     const existing = new Set<string>();
     for (let i = 0; i < ids.length; i += 90) {
       const chunk = ids.slice(i, i + 90);
@@ -219,7 +223,7 @@ export class D1BankStore implements BankStore {
          merchant_category_code = excluded.merchant_category_code, bank_transaction_code = excluded.bank_transaction_code`,
     );
     await this.db.batch(
-      rows.map((t) =>
+      keep.map((t) =>
         stmt.bind(
           t.id,
           t.accountId,
@@ -241,6 +245,7 @@ export class D1BankStore implements BankStore {
   }
 
   async listTransactions(q: TransactionListQuery): Promise<TransactionListPage> {
+    await this.purgeSuperseded([]);
     const where: string[] = [];
     const args: unknown[] = [];
     const add = (sql: string, value: unknown) => {
@@ -285,6 +290,50 @@ export class D1BankStore implements BankStore {
     };
   }
 
+  /**
+   * Drops pending rows that a booked copy has replaced.
+   * shortcut: scans every pending row, fine for one account; bound the scan if history grows.
+   */
+  private async purgeSuperseded(extra: readonly BankTransaction[]): Promise<Set<string>> {
+    const pending = await this.select(`SELECT * FROM bank_transactions WHERE status = 'pending'`);
+    const anchors = [...pending, ...extra];
+    let booked: BankTransaction[] = [];
+    const dates = anchors.map((row) => row.bookingDate).filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day)).sort();
+    const accounts = [...new Set(anchors.map((row) => row.accountId))];
+    if (dates.length > 0 && accounts.length > 0) {
+      booked = await this.selectBooked(accounts, shiftIsoDay(dates[0]!, -PENDING_MATCH_DAYS), shiftIsoDay(dates[dates.length - 1]!, PENDING_MATCH_DAYS));
+    }
+    const drop = supersededPendingIds([...pending, ...booked, ...extra]);
+    await this.deleteIds(drop);
+    return new Set(drop);
+  }
+
+  private async select(sql: string, args: unknown[] = []): Promise<BankTransaction[]> {
+    const stmt = this.db.prepare(sql);
+    const { results } = await (args.length > 0 ? stmt.bind(...args) : stmt).all<TxRow>();
+    return results.map(rowToTx);
+  }
+
+  private async selectBooked(accountIds: string[], from: string, to: string): Promise<BankTransaction[]> {
+    const out: BankTransaction[] = [];
+    for (let i = 0; i < accountIds.length; i += 40) {
+      const chunk = accountIds.slice(i, i + 40);
+      const inSql = chunk.map((_, j) => `?${j + 3}`).join(',');
+      const sql = `SELECT * FROM bank_transactions WHERE status = 'booked' AND booking_date >= ?1 AND booking_date <= ?2 AND account_id IN (${inSql})`;
+      out.push(...(await this.select(sql, [from, to, ...chunk])));
+    }
+    return out;
+  }
+
+  private async deleteIds(ids: readonly string[]): Promise<void> {
+    const unique = [...new Set(ids)];
+    for (let i = 0; i < unique.length; i += 80) {
+      const chunk = unique.slice(i, i + 80);
+      const sql = `DELETE FROM bank_transactions WHERE id IN (${chunk.map((_, j) => `?${j + 1}`).join(',')})`;
+      await this.db.prepare(sql).bind(...chunk).run();
+    }
+  }
+
   async saveCursor(c: SyncCursor): Promise<void> {
     await this.db
       .prepare(
@@ -322,14 +371,18 @@ export class MemoryBankStore implements BankStore {
     return this.accounts.get(id) ?? null;
   }
   async upsertTransactions(rows: readonly BankTransaction[]) {
+    const drop = new Set(supersededPendingIds([...this.transactions.values(), ...rows]));
+    for (const id of drop) this.transactions.delete(id);
     let added = 0;
     for (const row of rows) {
+      if (drop.has(row.id)) continue;
       if (!this.transactions.has(row.id)) added++;
       this.transactions.set(row.id, row);
     }
     return added;
   }
   async listTransactions(q: TransactionListQuery): Promise<TransactionListPage> {
+    for (const id of supersededPendingIds([...this.transactions.values()])) this.transactions.delete(id);
     const after = decodeListCursor(q.cursor);
     const all = [...this.transactions.values()]
       .filter((t) => (!q.accountId || t.accountId === q.accountId) && (!q.from || t.bookingDate >= q.from) && (!q.to || t.bookingDate <= q.to))

@@ -7,10 +7,11 @@
 import { labelBudgetAccounts } from './account-labels';
 import type { BudgetDataSource, TransactionQuery } from './data-source';
 import type { Account, Transaction } from './model';
+import { withoutSupersededPending } from './pending-dedupe';
 
 export type RemoteBudgetSourceOptions = {
   baseUrl: string;
-  token: string;
+  token: string | (() => Promise<string>);
   fetch?: typeof fetch;
   /** Page size for `/bank/transactions`. Max 1000 on the Worker. */
   pageSize?: number;
@@ -36,9 +37,10 @@ export function createRemoteBudgetSource(options: RemoteBudgetSourceOptions): Bu
   const maxPages = options.maxPages ?? 50;
 
   async function request<T>(path: string, method: 'GET' | 'POST'): Promise<T> {
+    const token = typeof options.token === 'function' ? await options.token() : options.token;
     const res = await fetchImpl(`${base}${path}`, {
       method,
-      headers: { 'X-Folio-Token': options.token, Accept: 'application/json' },
+      headers: { 'X-Folio-Token': token, Accept: 'application/json' },
     });
     if (!res.ok) {
       let code: string | undefined;
@@ -99,7 +101,7 @@ export function createRemoteBudgetSource(options: RemoteBudgetSourceOptions): Bu
         cursor = body.nextCursor;
         if (!cursor) break;
       }
-      return out;
+      return withoutSupersededPending(out);
     },
   };
 }

@@ -230,6 +230,8 @@ export type Transaction = {
   merchantCategoryCode?: string;
   /** Berlin Group bank transaction code, when present. */
   bankTransactionCode?: string;
+  /** Bank transaction id and entry reference, when the payload still carries them. */
+  providerRefs?: string[];
   /** Filled client-side. Raw bank payloads leave it empty. */
   categoryId?: CategoryId;
   categorySource?: CategorySource;

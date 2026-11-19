@@ -35,6 +35,11 @@ export type BankTransaction = {
   remittanceInformation?: string;
   merchantCategoryCode?: string;
   bankTransactionCode?: string;
+  /**
+   * Provider transaction id and entry reference, when the bank sent them.
+   * Present on a freshly mapped row so a pending copy can be matched; not a D1 column.
+   */
+  providerRefs?: string[];
 };
 
 export type Institution = {
