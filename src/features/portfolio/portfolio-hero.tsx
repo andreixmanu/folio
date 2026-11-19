@@ -46,8 +46,7 @@ function PortfolioHeroImpl({
   const masked = useBalancesHidden();
   const history = useValueHistory(range, { t: pricesUpdatedAt, value: totalValue });
 
-  const change = history.data?.change ?? 0;
-  const changePct = history.data?.changePct ?? 0;
+  const historyData = history.data;
 
   return (
     <Animated.View
@@ -73,16 +72,22 @@ function PortfolioHeroImpl({
           flexWrap: 'wrap',
           gap: theme.spacing.sm,
         }}>
-        <ChangeChip
-          percent={changePct}
-          amount={change}
-          masked={masked}
-          testID="total-change"
-          style={{ alignSelf: 'center' }}
-        />
-        <AppText variant="caption" color="textSecondary">
-          {RANGE_CAPTION[range]}
-        </AppText>
+        {historyData ? (
+          <>
+            <ChangeChip
+              percent={historyData.changePct}
+              amount={historyData.change}
+              masked={masked}
+              testID="total-change"
+              style={{ alignSelf: 'center' }}
+            />
+            <AppText variant="caption" color="textSecondary">
+              {RANGE_CAPTION[historyData.range]}
+            </AppText>
+          </>
+        ) : history.isError ? null : (
+          <Skeleton width={148} height={28} radius={theme.radii.pill} />
+        )}
       </View>
       {totalNote ? (
         <AppText variant="caption" color="warning" testID="partial-total">
@@ -91,11 +96,11 @@ function PortfolioHeroImpl({
       ) : null}
 
       <View style={{ alignSelf: 'stretch', marginTop: theme.spacing.xs }}>
-        {history.data ? (
+        {historyData ? (
           <ValueChart
-            points={history.data.points}
-            range={range}
-            trend={change >= 0 ? 'up' : 'down'}
+            points={historyData.points}
+            range={historyData.range}
+            trend={historyData.change >= 0 ? 'up' : 'down'}
             masked={masked}
             height={CHART_HEIGHT}
           />

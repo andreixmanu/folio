@@ -116,6 +116,7 @@ describe('PortfolioScreen wallets', () => {
     expect(screen.getByTestId('portfolio-hero')).toBeTruthy();
     expect(screen.getByTestId('range-1W').props.accessibilityState).toEqual({ selected: true });
     expect(screen.getByText('Tutto')).toBeTruthy();
+    expect(screen.getByText('ultima settimana')).toBeTruthy();
     unmount();
   });
 

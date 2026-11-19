@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { fetchIbkrPositions, ibkrFlatSeries, ibkrQuotes, ibkrSource, ibkrStatusNote, mapIbkrToPositions } from './ibkr';
-import { buildSnapshot, buildValueHistory } from './portfolio';
+import { assembleValueHistory, buildSnapshot, historyWindow } from './portfolio';
 import { queryKeys } from './query-keys';
 import { RANGE_SPECS } from './ranges';
 import { newsSource, priceSources, TANGEM_SOURCE } from './sources';
@@ -69,6 +69,8 @@ function useCryptoQuotes(symbols: string[], enabled: boolean) {
     refetchIntervalInBackground: false,
     placeholderData: keepPreviousData,
     retry: 2,
+    // A failed fetch has no data, so the chart's observer would refetch, clear the error, and unmount.
+    retryOnMount: false,
   });
 }
 
@@ -139,17 +141,24 @@ export function usePortfolio() {
 
 /**
  * Value history for a range = current quantities × historical closes (Kraken OHLC for
- * crypto). Stocks have no price history yet, so IBKR holdings contribute a flat line at
- * their last statement mark. `live` pins the last point to the live total.
+ * crypto), in EUR. Stocks have no price history yet, so IBKR holdings are a flat line at
+ * the statement mark (`markPriceBase`). A quoted coin with no candles is flat too, so it
+ * cannot show up as a deposit. `live` pins the last point to the portfolio total only when
+ * that total is the same set of holdings. The payload keeps the range it was fetched for,
+ * so a range switch does not relabel the previous series.
  */
 export function useValueHistory(range: TimeRange, live?: { t: number; value: number }) {
   const { positions, ibkr, settled } = usePositions();
   const cryptoSymbols = symbolsOf(positions, 'crypto');
+  const cryptoQuotes = useCryptoQuotes(cryptoSymbols, settled);
 
   const query = useQuery({
     queryKey: queryKeys.history(range, cryptoSymbols),
     enabled: settled,
-    queryFn: async ({ signal }) => (await priceSources.crypto.getHistory(cryptoSymbols, range, signal)).series,
+    queryFn: async ({ signal }) => {
+      const series = (await priceSources.crypto.getHistory(cryptoSymbols, range, signal)).series;
+      return { range, series };
+    },
     staleTime: RANGE_SPECS[range].staleMs,
     placeholderData: keepPreviousData,
     retry: 1,
@@ -157,20 +166,22 @@ export function useValueHistory(range: TimeRange, live?: { t: number; value: num
 
   const liveT = live?.t;
   const liveValue = live?.value;
+  const payload = query.data;
+  const quoteData = cryptoQuotes.data;
   const data = useMemo(() => {
-    if (!query.data) return undefined;
-    const cryptoEnd = Math.max(0, ...query.data.map((x) => x.points.at(-1)?.t ?? 0));
-    const end = Math.max(cryptoEnd, liveT ?? 0);
-    const spec = RANGE_SPECS[range];
-    const start = cryptoEnd > 0 ? 0 : end - (spec.points - 1) * spec.intervalMin * 60_000;
+    if (!payload) return undefined;
+    const { start, end } = historyWindow(payload.series, liveT ?? 0, payload.range);
     const stockSeries = ibkr.data && end > 0 ? ibkrFlatSeries(ibkr.data, start, end) : [];
-    return buildValueHistory(
+    const quotes = [...(quoteData?.quotes ?? []), ...(ibkr.data ? ibkrQuotes(ibkr.data) : [])];
+    return assembleValueHistory({
       positions,
-      [...query.data, ...stockSeries],
-      range,
-      liveT && liveValue ? { t: liveT, value: liveValue } : undefined,
-    );
-  }, [query.data, ibkr.data, positions, range, liveT, liveValue]);
+      cryptoSeries: payload.series,
+      stockSeries,
+      quotes,
+      range: payload.range,
+      live: liveT && liveValue ? { t: liveT, value: liveValue } : undefined,
+    });
+  }, [payload, ibkr.data, positions, quoteData, liveT, liveValue]);
 
   return {
     data,
