@@ -20,9 +20,9 @@ function fakeFetch(handler: (url: URL) => { status?: number; body: unknown }) {
 
 describe('RemoteBudgetDataSource', () => {
   test('lists accounts with the app token', async () => {
-    const { impl, calls } = fakeFetch(() => ({ body: { accounts: [{ id: 'revolut-1' }] } }));
+    const { impl, calls } = fakeFetch(() => ({ body: { accounts: [{ id: 'revolut-1', provider: 'revolut', name: 'Some Person' }] } }));
     const source = createRemoteBudgetSource({ baseUrl: 'https://api.example/', token: 'tok', fetch: impl });
-    expect(await source.getAccounts()).toEqual([{ id: 'revolut-1' }]);
+    expect(await source.getAccounts()).toEqual([{ id: 'revolut-1', provider: 'revolut', name: 'Revolut', holderKey: expect.any(String) }]);
     expect(calls[0]).toEqual({ url: 'https://api.example/bank/accounts', headers: { 'X-Folio-Token': 'tok', Accept: 'application/json' } });
   });
 

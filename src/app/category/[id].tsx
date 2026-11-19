@@ -21,7 +21,7 @@ import {
 } from '@/features/budget/analytics';
 import { CategoryBadge, MoneyText, TransactionRow } from '@/features/budget/components';
 import { toISODate } from '@/features/budget/dates';
-import { useCategorizedTransactions } from '@/features/budget/hooks';
+import { useCategorizedTransactions, useRefreshBudget } from '@/features/budget/hooks';
 import { CATEGORY_BY_ID, isCategoryId, sumAmounts, type CategoryId } from '@/features/budget/model';
 import { useUiStore } from '@/store/ui-store';
 import { useSyncMode } from '@/store/use-sync-mode';
@@ -80,12 +80,13 @@ export default function CategoryDetailScreen() {
   const categoryId: CategoryId | null = isCategoryId(rawId) ? rawId : null;
   const period = periodFromParam(params.period);
   const query = useCategorizedTransactions();
+  const bankRefresh = useRefreshBudget();
   const [now] = useState(() => new Date());
   const today = toISODate(now);
 
   const transactions = query.data;
   const retry = () => {
-    void query.refetch();
+    void bankRefresh.refresh();
   };
 
   let body;
@@ -194,7 +195,10 @@ export default function CategoryDetailScreen() {
   }
 
   return (
-    <Screen testID="budget-category-screen">
+    <Screen
+      testID="budget-category-screen"
+      refreshing={bankRefresh.refreshing || query.isRefetching}
+      onRefresh={retry}>
       <BackHeader />
       {body}
     </Screen>

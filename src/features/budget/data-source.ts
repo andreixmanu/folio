@@ -23,6 +23,11 @@ export interface BudgetDataSource {
   getAccounts(): Promise<Account[]>;
   /** Raw movements. Category fields are left empty on purpose. */
   getTransactions(params?: TransactionQuery): Promise<Transaction[]>;
+  /**
+   * Ask the bank for new movements and fresh balances, then return.
+   * The mock does nothing. Callers refetch accounts and transactions afterwards.
+   */
+  refreshFromBank(): Promise<void>;
 }
 
 function delay(ms: number): Promise<void> {
@@ -70,6 +75,9 @@ export function createMockBudgetSource(
           return true;
         })
         .map(rawTransaction);
+    },
+    async refreshFromBank() {
+      // The mock has nothing to sync. Keep this immediate so tests stay fast.
     },
   };
 }

@@ -4,6 +4,7 @@
  * configured and switched on with `EXPO_PUBLIC_BUDGET_SOURCE=remote`.
  */
 
+import { labelBudgetAccounts } from './account-labels';
 import type { BudgetDataSource, TransactionQuery } from './data-source';
 import type { Account, Transaction } from './model';
 
@@ -34,8 +35,9 @@ export function createRemoteBudgetSource(options: RemoteBudgetSourceOptions): Bu
   const pageSize = options.pageSize ?? 500;
   const maxPages = options.maxPages ?? 50;
 
-  async function get<T>(path: string): Promise<T> {
+  async function request<T>(path: string, method: 'GET' | 'POST'): Promise<T> {
     const res = await fetchImpl(`${base}${path}`, {
+      method,
       headers: { 'X-Folio-Token': options.token, Accept: 'application/json' },
     });
     if (!res.ok) {
@@ -56,10 +58,25 @@ export function createRemoteBudgetSource(options: RemoteBudgetSourceOptions): Bu
     return (await res.json()) as T;
   }
 
+  function get<T>(path: string): Promise<T> {
+    return request<T>(path, 'GET');
+  }
+
   return {
     async getAccounts() {
       const body = await get<{ accounts: Account[] }>('/bank/accounts');
-      return body.accounts;
+      return labelBudgetAccounts(body.accounts);
+    },
+
+    async refreshFromBank() {
+      const listed = await get<{ accounts: { id: string }[] }>('/bank/accounts');
+      // One rejected sync must not skip the other accounts or the balance refresh.
+      await Promise.allSettled(
+        listed.accounts.map((account) =>
+          request(`/bank/accounts/${encodeURIComponent(account.id)}/sync`, 'POST'),
+        ),
+      );
+      await get('/bank/accounts?refresh=1');
     },
 
     async getTransactions(params?: TransactionQuery) {

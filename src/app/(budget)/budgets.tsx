@@ -26,7 +26,7 @@ import {
 import { CategoryBadge, MoneyText } from '@/features/budget/components';
 import { BudgetLimitSheet } from '@/features/budget/components/budget-limit-sheet';
 import { toISODate } from '@/features/budget/dates';
-import { useBudgetProgress, useRecurring } from '@/features/budget/hooks';
+import { useBudgetProgress, useRecurring, useRefreshBudget } from '@/features/budget/hooks';
 import { CATEGORIES, CATEGORY_BY_ID, type CategoryId, type RecurringPayment } from '@/features/budget/model';
 import { useBudgetStore } from '@/features/budget/store';
 import { MASK } from '@/lib/format';
@@ -189,9 +189,10 @@ export default function BudgetsScreen() {
   const [editingId, setEditingId] = useState<CategoryId | null>(null);
 
   const today = toISODate(new Date());
-  const refreshing = progressQuery.isRefetching;
+  const bankRefresh = useRefreshBudget();
+  const refreshing = bankRefresh.refreshing || progressQuery.isRefetching || recurringQuery.isRefetching;
   const retry = () => {
-    void progressQuery.refetch();
+    void bankRefresh.refresh();
   };
 
   const closeSheet = () => {

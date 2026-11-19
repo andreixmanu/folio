@@ -120,6 +120,8 @@ export function detectRecurring(txs: readonly Transaction[], now: Date): Recurri
   const groups = new Map<string, Transaction[]>();
   for (const tx of txs) {
     if (tx.amount.amount >= 0) continue;
+    // Internal standing orders are not upcoming bills.
+    if (tx.categoryId === 'transfers') continue;
     const key = merchantKeyFor(tx);
     if (!key) continue;
     const bucket = groups.get(key);

@@ -28,7 +28,7 @@ import {
   type CategoryBreakdown,
 } from '@/features/budget/analytics';
 import { CategoryBadge, MoneyText } from '@/features/budget/components';
-import { useCategorizedTransactions } from '@/features/budget/hooks';
+import { useCategorizedTransactions, useRefreshBudget } from '@/features/budget/hooks';
 import { CATEGORY_BY_ID, isCategoryId } from '@/features/budget/model';
 import { formatPercent } from '@/lib/format';
 import { useUiStore } from '@/store/ui-store';
@@ -141,9 +141,10 @@ export default function AnalyticsScreen() {
   const comparison = transactions ? periodComparison(transactions, period, now) : null;
   const breakdown = transactions ? categoryBreakdown(transactions, range) : [];
   const trend = transactions ? monthlyTrend(transactions, 6, now) : [];
-  const refreshing = query.isRefetching;
+  const bankRefresh = useRefreshBudget();
+  const refreshing = bankRefresh.refreshing || query.isRefetching;
   const retry = () => {
-    void query.refetch();
+    void bankRefresh.refresh();
   };
 
   let body: ReactNode;

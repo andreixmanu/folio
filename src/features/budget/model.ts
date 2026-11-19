@@ -18,6 +18,11 @@ export type Account = {
   /** Known values: `'revolut'` and `'bank'`. Other provider ids are allowed. */
   provider: string;
   name: string;
+  /**
+   * Normalised bank-provided holder label, kept so own-account transfers still match
+   * after `name` is replaced with a safe institution label. Never render this.
+   */
+  holderKey?: string;
   institutionName: string;
   /** Masked, fictional IBAN such as `IT•• •••• 4821`. */
   iban?: string;

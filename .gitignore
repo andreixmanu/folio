@@ -45,5 +45,9 @@ example
 # ephemeral Expo Go tunnel QR
 screenshots/expo-qr.png
 
+# open-banking screenshots contain real account data
+screenshots/budget-real-*.png
+
 # local env (API URL)
 .env
+screenshots/

@@ -15,6 +15,7 @@ import {
   SectionTitle,
   Skeleton,
 } from '@/components/ui';
+import { sumEurBalances } from '@/features/budget/account-labels';
 import {
   monthSpendComparison,
   monthToDateCumulative,
@@ -23,8 +24,7 @@ import {
 } from '@/features/budget/analytics';
 import { BudgetHero, CategorySpendRow, RecurringPaymentRow, TransactionRow } from '@/features/budget/components';
 import { toISODate } from '@/features/budget/dates';
-import { useAccounts, useCategorizedTransactions, useRecurring } from '@/features/budget/hooks';
-import { sumAmounts } from '@/features/budget/model';
+import { useAccounts, useCategorizedTransactions, useRecurring, useRefreshBudget } from '@/features/budget/hooks';
 import { upcomingPayments } from '@/features/budget/recurring';
 import { formatMoney } from '@/lib/format';
 import { useUiStore } from '@/store/ui-store';
@@ -87,17 +87,17 @@ export default function OverviewScreen() {
 
   const accounts = accountsQuery.data;
   const transactions = transactionsQuery.data;
-  const total = accounts ? sumAmounts(accounts.map((account) => account.balance.amount)) : 0;
+  const total = accounts ? sumEurBalances(accounts) : 0;
   const comparison = transactions ? monthSpendComparison(transactions, now) : null;
   const cumulative = transactions ? monthToDateCumulative(transactions, now) : null;
   const categories = transactions ? topCategoryShares(transactions, now, TOP_CATEGORIES) : [];
   const recent = transactions ? recentTransactions(transactions, RECENT_LIMIT) : [];
   const upcoming = recurringQuery.data ? upcomingPayments(recurringQuery.data, now, UPCOMING_DAYS) : [];
 
-  const refreshing = accountsQuery.isRefetching || transactionsQuery.isRefetching;
+  const bankRefresh = useRefreshBudget();
+  const refreshing = bankRefresh.refreshing || accountsQuery.isRefetching || transactionsQuery.isRefetching;
   const retry = () => {
-    void accountsQuery.refetch();
-    void transactionsQuery.refetch();
+    void bankRefresh.refresh();
   };
 
   return (

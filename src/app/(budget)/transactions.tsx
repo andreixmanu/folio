@@ -18,7 +18,7 @@ import { groupByDay } from '@/features/budget/analytics';
 import { CategoryPickerSheet } from '@/features/budget/components/category-picker-sheet';
 import { MoneyText, TransactionRow } from '@/features/budget/components';
 import { toISODate } from '@/features/budget/dates';
-import { useAccounts, useCategorizedTransactions } from '@/features/budget/hooks';
+import { useAccounts, useCategorizedTransactions, useRefreshBudget } from '@/features/budget/hooks';
 import { type Transaction } from '@/features/budget/model';
 import {
   EMPTY_FILTERS,
@@ -125,9 +125,9 @@ export default function TransactionsScreen() {
   const bottomPadding =
     theme.layout.tabBarHeight + theme.layout.tabBarBottomGap + insets.bottom + theme.spacing.lg;
 
+  const bankRefresh = useRefreshBudget();
   const retry = () => {
-    void transactionsQuery.refetch();
-    void accountsQuery.refetch();
+    void bankRefresh.refresh();
   };
 
   const resetFilters = () => {
@@ -174,7 +174,7 @@ export default function TransactionsScreen() {
         }}
         refreshControl={
           <RefreshControl
-            refreshing={transactionsQuery.isRefetching}
+            refreshing={bankRefresh.refreshing || transactionsQuery.isRefetching || accountsQuery.isRefetching}
             onRefresh={retry}
             tintColor={theme.colors.textSecondary}
             colors={[theme.colors.accent]}

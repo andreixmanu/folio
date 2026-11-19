@@ -16,7 +16,7 @@ import {
 import { ChevronLeft, ChevronRight } from '@/components/ui/icons';
 import { CategoryPickerSheet } from '@/features/budget/components/category-picker-sheet';
 import { CategoryBadge, MoneyText } from '@/features/budget/components';
-import { useAccounts, useCategorizedTransactions } from '@/features/budget/hooks';
+import { useAccounts, useCategorizedTransactions, useRefreshBudget } from '@/features/budget/hooks';
 import { displayMerchant } from '@/features/budget/merchant';
 import { CATEGORY_BY_ID, counterpartyRaw, type CategoryId, type Transaction } from '@/features/budget/model';
 import { useBudgetStore } from '@/features/budget/store';
@@ -108,12 +108,13 @@ export default function TransactionDetailScreen() {
   const id = paramId(params.id);
   const transactionsQuery = useCategorizedTransactions();
   const accountsQuery = useAccounts();
+  const bankRefresh = useRefreshBudget();
   const [open, setOpen] = useState(false);
 
   const transactions = transactionsQuery.data;
   const tx = transactions?.find((item) => item.id === id);
   const retry = () => {
-    void transactionsQuery.refetch();
+    void bankRefresh.refresh();
   };
 
   let body = <DetailSkeleton />;
@@ -209,7 +210,10 @@ export default function TransactionDetailScreen() {
   }
 
   return (
-    <Screen testID="budget-transaction-screen">
+    <Screen
+      testID="budget-transaction-screen"
+      refreshing={bankRefresh.refreshing || transactionsQuery.isRefetching}
+      onRefresh={retry}>
       <BackHeader />
       {body}
     </Screen>
