@@ -14,6 +14,13 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+/** Today's move for one holding. A change of −100% or worse has no finite previous price. */
+function dayDelta(value: number, changePct: number): number {
+  const factor = 1 + changePct / 100;
+  if (!(factor > 0) || !Number.isFinite(value)) return 0;
+  return value - value / factor;
+}
+
 /** Values positions with the given quotes. Unpriced positions are excluded and listed. */
 export function buildSnapshot(
   sources: Source[],
@@ -33,9 +40,7 @@ export function buildSnapshot(
     holdings.push({ ...p, price: q.price, changePct: q.changePct, value: round2(p.quantity * q.price) });
   }
   const totalValue = round2(holdings.reduce((s, h) => s + h.value, 0));
-  const dayChange = round2(
-    holdings.reduce((s, h) => s + h.value - h.value / (1 + h.changePct / 100), 0),
-  );
+  const dayChange = round2(holdings.reduce((s, h) => s + dayDelta(h.value, h.changePct), 0));
   const base = totalValue - dayChange;
   return {
     baseCurrency: 'EUR',

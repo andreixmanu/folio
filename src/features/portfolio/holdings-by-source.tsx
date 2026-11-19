@@ -72,7 +72,9 @@ export function HoldingsBySource({
                 {masked ? MASK : formatMoney(subtotal, 'EUR', { fractionDigits: 0 })}
               </AppText>
               <AppText variant="caption" color="textSecondary" tabular>
-                {formatPercent((subtotal / snapshot.totalValue) * 100, { signed: false })}
+                {formatPercent(snapshot.totalValue > 0 ? (subtotal / snapshot.totalValue) * 100 : 0, {
+                  signed: false,
+                })}
               </AppText>
             </View>
           </View>

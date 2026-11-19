@@ -113,6 +113,23 @@ describe('PortfolioScreen wallets', () => {
     unmount();
   });
 
+  test('a zero total shows 0% instead of NaN', async () => {
+    const position = {
+      id: 'ibkr-zero',
+      sourceId: 'ibkr',
+      symbol: 'ZERO',
+      name: 'Zero',
+      assetClass: 'stocks' as const,
+      instrument: 'stock' as const,
+      quantity: 1,
+    };
+    const snapshot = buildSnapshot([IBKR_SOURCE], [position], [{ symbol: 'ZERO', price: 0, changePct: 0 }], 't');
+    await renderWithProviders(<HoldingsBySource snapshot={snapshot} />);
+    expect(snapshot.totalValue).toBe(0);
+    expect(screen.getByText('0,00%')).toBeTruthy();
+    expect(screen.queryByText(/NaN/)).toBeNull();
+  });
+
   test('shows stocks and an inline note when /wallets fails', async () => {
     const snapshot = buildSnapshot([IBKR_SOURCE, TANGEM_SOURCE], FIXTURE_IBKR_POSITIONS, FIXTURE_STOCK_QUOTES, 't');
     const onRetry = jest.fn();

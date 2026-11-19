@@ -34,6 +34,21 @@ describe('buildSnapshot', () => {
     expect(s.unpriced).toEqual([]);
   });
 
+  test('a quote of −100% does not make the day change infinite', () => {
+    const s = buildSnapshot(
+      SOURCES,
+      CRYPTO_POSITIONS,
+      [
+        { symbol: 'BTC', price: 100, changePct: -100 },
+        { symbol: 'ETH', price: 50, changePct: -2 },
+      ],
+      't',
+    );
+    expect(Number.isFinite(s.dayChange)).toBe(true);
+    expect(Number.isFinite(s.dayChangePct)).toBe(true);
+    expect(s.dayChange).not.toBe(0);
+  });
+
   test('excludes and reports positions without a price', () => {
     const s = buildSnapshot(SOURCES, POSITIONS, CRYPTO.slice(0, 1), 'x');
     expect(s.holdings.every((h) => h.symbol === 'BTC')).toBe(true);
