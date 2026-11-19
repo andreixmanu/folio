@@ -60,9 +60,18 @@ function tradable(p: IbkrPosition): boolean {
   return p.assetCategory === 'STK' && p.quantity !== 0;
 }
 
-/** Unique, stable app symbol: IBKR symbol, suffixed when two lines share it. */
+/** Stable row id: conid, or symbol-currency when Interactive Brokers omitted the conid. */
 function keyOf(p: IbkrPosition): string {
   return p.conid ?? `${p.symbol}-${p.currency}`;
+}
+
+/** Price key: conid, else ISIN, else exchange + currency + symbol. */
+export function instrumentKey(
+  p: Pick<IbkrPosition, 'conid' | 'isin' | 'symbol' | 'listingExchange' | 'currency'>,
+): string {
+  if (p.conid) return `c:${p.conid}`;
+  if (p.isin) return `i:${p.isin}`;
+  return `x:${p.listingExchange ?? ''}:${p.currency}:${p.symbol}`;
 }
 
 export function mapIbkrToPositions(res: IbkrPositionsResponse): Position[] {
@@ -73,6 +82,7 @@ export function mapIbkrToPositions(res: IbkrPositionsResponse): Position[] {
     name: prettyName(p.description, p.symbol),
     assetClass: 'stocks' as const,
     instrument: (p.subCategory ?? '').toUpperCase() === 'ETF' ? ('etf' as const) : ('stock' as const),
+    instrumentId: instrumentKey(p),
     quantity: p.quantity,
   }));
 }
@@ -82,13 +92,10 @@ export function mapIbkrToPositions(res: IbkrPositionsResponse): Position[] {
  * change, so `changePct` is 0 until a stock price feed exists.
  */
 export function ibkrQuotes(res: IbkrPositionsResponse): PriceQuote[] {
-  const seen = new Set<string>();
   const quotes: PriceQuote[] = [];
   for (const p of res.positions.filter(tradable)) {
-    if (seen.has(p.symbol)) continue;
-    seen.add(p.symbol);
     const price = p.markPriceBase || (p.quantity ? p.valueBase / p.quantity : 0);
-    quotes.push({ symbol: p.symbol, price, changePct: 0 });
+    quotes.push({ symbol: p.symbol, instrumentId: instrumentKey(p), price, changePct: 0 });
   }
   return quotes;
 }
@@ -100,6 +107,7 @@ export function ibkrQuotes(res: IbkrPositionsResponse): PriceQuote[] {
 export function ibkrFlatSeries(res: IbkrPositionsResponse, startMs: number, endMs: number): PriceSeries[] {
   return ibkrQuotes(res).map((q) => ({
     symbol: q.symbol,
+    ...(q.instrumentId ? { instrumentId: q.instrumentId } : {}),
     points: endMs > startMs ? [{ t: startMs, close: q.price }, { t: endMs, close: q.price }] : [{ t: startMs, close: q.price }],
   }));
 }

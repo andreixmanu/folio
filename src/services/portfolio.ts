@@ -14,6 +14,11 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+/** Quote lookup key. An instrument id beats the ticker when two lines share a symbol. */
+function priceKey(row: { symbol: string; instrumentId?: string }): string {
+  return row.instrumentId ?? row.symbol;
+}
+
 /** Today's move for one holding. A change of −100% or worse has no finite previous price. */
 function dayDelta(value: number, changePct: number): number {
   const factor = 1 + changePct / 100;
@@ -28,11 +33,11 @@ export function buildSnapshot(
   quotes: PriceQuote[],
   updatedAt: string,
 ): PortfolioSnapshot {
-  const bySymbol = new Map(quotes.map((q) => [q.symbol, q]));
+  const byKey = new Map(quotes.map((q) => [priceKey(q), q]));
   const holdings: Holding[] = [];
   const unpriced: string[] = [];
   for (const p of positions) {
-    const q = bySymbol.get(p.symbol);
+    const q = byKey.get(priceKey(p));
     if (!q) {
       if (!unpriced.includes(p.symbol)) unpriced.push(p.symbol);
       continue;
@@ -83,8 +88,11 @@ export function buildValueHistory(
   live?: { t: number; value: number },
 ): ValueHistory {
   const qty = new Map<string, number>();
-  for (const p of positions) qty.set(p.symbol, (qty.get(p.symbol) ?? 0) + p.quantity);
-  const usable = series.filter((s) => qty.has(s.symbol) && s.points.length > 0);
+  for (const p of positions) {
+    const key = priceKey(p);
+    qty.set(key, (qty.get(key) ?? 0) + p.quantity);
+  }
+  const usable = series.filter((s) => qty.has(priceKey(s)) && s.points.length > 0);
 
   let points: ValuePoint[] = [];
   if (usable.length > 0) {
@@ -96,7 +104,7 @@ export function buildValueHistory(
     points = axis.map((t) => ({
       timestamp: t,
       value: round2(
-        usable.reduce((sum, s) => sum + (closeAt(s, t) ?? 0) * (qty.get(s.symbol) ?? 0), 0),
+        usable.reduce((sum, s) => sum + (closeAt(s, t) ?? 0) * (qty.get(priceKey(s)) ?? 0), 0),
       ),
     }));
   }

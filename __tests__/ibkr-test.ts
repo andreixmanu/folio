@@ -5,6 +5,7 @@ import {
   ibkrQuotes,
   ibkrSource,
   ibkrStatusNote,
+  instrumentKey,
   mapIbkrToPositions,
   prettyName,
   type IbkrPositionsResponse,
@@ -45,8 +46,8 @@ describe('ibkr mapping', () => {
   test('quotes are EUR marks via fxRateToBase and value matches the statement', () => {
     const quotes = ibkrQuotes(RES);
     expect(quotes).toEqual([
-      { symbol: 'VWCE', price: 132.86, changePct: 0 },
-      { symbol: 'ACME', price: 90, changePct: 0 },
+      { symbol: 'VWCE', instrumentId: 'c:vwce', price: 132.86, changePct: 0 },
+      { symbol: 'ACME', instrumentId: 'c:42', price: 90, changePct: 0 },
     ]);
     const s = buildSnapshot([ibkrSource(RES)], mapIbkrToPositions(RES), quotes, 't');
     expect(s.totalValue).toBeCloseTo(310 * 132.86 + 360, 2);
@@ -63,6 +64,35 @@ describe('ibkr mapping', () => {
     expect(h.points.map((p) => p.timestamp)).toEqual([1000, 2000, 3000]);
     expect(h.points[0]!.value).toBeCloseTo(1000 + stocks, 1);
     expect(h.change).toBeCloseTo(2000, 1);
+  });
+
+  test('two lines of one symbol keep their own marks', () => {
+    const line = (conid: string, price: number, quantity: number) => ({
+      ...USD_ROW,
+      symbol: 'AAPL',
+      conid,
+      quantity,
+      markPriceBase: price,
+      valueBase: price * quantity,
+    });
+    const res = { ...RES, positions: [line('1', 10, 2), line('2', 11, 3)] };
+    const quotes = ibkrQuotes(res);
+    expect(quotes.map((q) => [q.symbol, q.instrumentId, q.price])).toEqual([
+      ['AAPL', 'c:1', 10],
+      ['AAPL', 'c:2', 11],
+    ]);
+    const snap = buildSnapshot([ibkrSource(res)], mapIbkrToPositions(res), quotes, 't');
+    expect(snap.holdings.map((h) => h.value)).toEqual([20, 33]);
+    expect(snap.totalValue).toBe(53);
+    const history = buildValueHistory(mapIbkrToPositions(res), ibkrFlatSeries(res, 0, 2), '1M');
+    expect(history.points.at(-1)?.value).toBe(53);
+  });
+
+  test('instrument key falls back from conid to ISIN, then venue and currency', () => {
+    const base = { symbol: 'VOD', isin: 'IE00', listingExchange: 'LSE', currency: 'GBP' };
+    expect(instrumentKey({ ...base, conid: '9' })).toBe('c:9');
+    expect(instrumentKey({ ...base, conid: null })).toBe('i:IE00');
+    expect(instrumentKey({ ...base, conid: null, isin: null })).toBe('x:LSE:GBP:VOD');
   });
 
   test('labels', () => {

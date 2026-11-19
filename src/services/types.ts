@@ -33,6 +33,8 @@ export type Holding = {
   /** Finer instrument type, for display only. */
   instrument: 'stock' | 'etf' | 'coin';
   quantity: number;
+  /** Disambiguates two listings of the same ticker (conid, ISIN, or venue). */
+  instrumentId?: string;
   /** Last price in the portfolio base currency. */
   price: number;
   /** Market value in the portfolio base currency. */
@@ -101,6 +103,8 @@ export interface PositionsSource {
 
 export type PriceQuote = {
   symbol: string;
+  /** When set, this quote prices only the position with the same id. */
+  instrumentId?: string;
   /** Last price in EUR. */
   price: number;
   /** Daily change in percent (crypto: vs today's 00:00 UTC open on Kraken). */
@@ -117,6 +121,8 @@ export type QuotesResult = {
 
 export type PriceSeries = {
   symbol: string;
+  /** Same key as `PriceQuote.instrumentId` when one symbol has two listings. */
+  instrumentId?: string;
   /** Close prices; `t` in milliseconds since epoch, ascending. */
   points: { t: number; close: number }[];
 };
