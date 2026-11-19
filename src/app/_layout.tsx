@@ -23,6 +23,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ModeTransitionOverlay } from '@/components/navigation/mode-transition-overlay';
 import { useBudgetStore } from '@/features/budget/store';
 import { createQueryClient, useAppStateFocus } from '@/services/query-client';
+import { restorePortfolioCache, subscribePortfolioCache } from '@/services/query-persister';
+import { useModeStore } from '@/store/mode-store';
+import { useUiStore } from '@/store/ui-store';
 import { ThemeProvider, useTheme } from '@/theme';
 
 void SplashScreen.preventAutoHideAsync();
@@ -116,6 +119,7 @@ function AppShell() {
 
 export default function RootLayout() {
   const [queryClient] = useState(createQueryClient);
+  const [cacheReady, setCacheReady] = useState(false);
   useAppStateFocus();
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
@@ -125,9 +129,34 @@ export default function RootLayout() {
     Inter_800ExtraBold,
   });
   const budgetHydrated = useBudgetStore((s) => s.hasHydrated);
-  // Stay on the splash until saved categories are loaded, so a tap cannot be
-  // overwritten by the late read (and cannot write defaults over them).
-  const ready = (fontsLoaded || fontError !== null) && budgetHydrated;
+  const modeHydrated = useModeStore((s) => s.hasHydrated);
+  const balancesHydrated = useUiStore((s) => s.balancesHydrated);
+
+  useEffect(() => {
+    let unsubscribe = () => {};
+    let cancelled = false;
+    // Overlaps font loading. Children mount only after this, so the first paint
+    // already has the last portfolio instead of an empty cache that then fetches.
+    void restorePortfolioCache(queryClient).finally(() => {
+      if (cancelled) return;
+      unsubscribe = subscribePortfolioCache(queryClient);
+      setCacheReady(true);
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [queryClient]);
+
+  // Local reads only, in parallel: categories (a tap must not clobber them),
+  // the last mode, the privacy flag, fonts, and the portfolio cache.
+  // Network refresh happens after the splash, behind the cached numbers.
+  const ready =
+    (fontsLoaded || fontError !== null) &&
+    budgetHydrated &&
+    modeHydrated &&
+    balancesHydrated &&
+    cacheReady;
 
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
