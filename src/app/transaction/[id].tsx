@@ -22,7 +22,7 @@ import { counterpartyRaw, type CategoryId, type Transaction } from '@/features/b
 import { useCategoryResolver } from '@/features/budget/use-categories';
 import { useBudgetStore } from '@/features/budget/store';
 import { isUserChosen } from '@/features/budget/transactions-view';
-import { useUiStore } from '@/store/ui-store';
+import { useBalancesHidden } from '@/store/ui-store';
 import { useSyncMode } from '@/store/use-sync-mode';
 import { useTheme } from '@/theme';
 
@@ -103,7 +103,7 @@ export default function TransactionDetailScreen() {
   const theme = useTheme();
   // Lives above both mode groups; a web deep link must still show the Budget accent.
   useSyncMode('budget');
-  const masked = useUiStore((state) => state.hideBalances);
+  const masked = useBalancesHidden();
   const setCategoryForTransaction = useBudgetStore((state) => state.setCategoryForTransaction);
   const clearCategoryForTransaction = useBudgetStore((state) => state.clearCategoryForTransaction);
   const userRules = useBudgetStore((state) => state.userRules);

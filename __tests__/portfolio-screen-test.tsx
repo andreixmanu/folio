@@ -104,7 +104,7 @@ describe('PortfolioScreen wallets', () => {
       quotes: symbols.map((symbol) => ({ symbol, price: 100, changePct: 1 })),
       unsupported: [],
     }));
-    useUiStore.setState({ timeRange: '1W', hideBalances: false });
+    useUiStore.setState({ timeRange: '1W', hideBalances: false, balancesHydrated: true });
   });
 
   test('renders the Tangem-style glow hero with the 1W range selected', async () => {

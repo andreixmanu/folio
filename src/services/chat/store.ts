@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { PortfolioSnapshot } from '@/services/types';
-import { useUiStore } from '@/store/ui-store';
+import { balancesAreHidden } from '@/store/ui-store';
 
 import { ChatError, streamChat, type ChatPhase, type ChatSource, type ChatTurn } from './client';
 import { buildPortfolioContext } from './context';
@@ -127,7 +127,7 @@ export const useChatStore = create<ChatState>()(
           pendingPhase: 'thinking',
         });
 
-        const hideBalances = useUiStore.getState().hideBalances;
+        const hideBalances = balancesAreHidden();
         const context = portfolio ? buildPortfolioContext(portfolio, hideBalances) : undefined;
         const history = toTurns(get().messages);
 

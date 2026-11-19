@@ -24,7 +24,7 @@ import { toISODate } from '@/features/budget/dates';
 import { useCategorizedTransactions, useRefreshBudget } from '@/features/budget/hooks';
 import { isCategoryId, sumAmounts, type CategoryId } from '@/features/budget/model';
 import { useCategoryResolver } from '@/features/budget/use-categories';
-import { useUiStore } from '@/store/ui-store';
+import { useBalancesHidden } from '@/store/ui-store';
 import { useSyncMode } from '@/store/use-sync-mode';
 import { useTheme } from '@/theme';
 
@@ -75,7 +75,7 @@ function DetailSkeleton() {
 export default function CategoryDetailScreen() {
   const theme = useTheme();
   useSyncMode('budget');
-  const masked = useUiStore((state) => state.hideBalances);
+  const masked = useBalancesHidden();
   const params = useLocalSearchParams<{ id?: string | string[]; period?: string | string[] }>();
   const rawId = firstParam(params.id);
   const categoryId: CategoryId | null = isCategoryId(rawId) ? rawId : null;

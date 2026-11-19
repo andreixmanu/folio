@@ -4,7 +4,7 @@ import { AllocationDonut } from '@/components/charts/allocation-donut';
 import { AppText, SegmentedControl } from '@/components/ui';
 import { allocationByAsset, allocationByClass, allocationBySource } from '@/services/allocation';
 import type { PortfolioSnapshot } from '@/services/types';
-import { useUiStore, type AllocationMode } from '@/store/ui-store';
+import { useBalancesHidden, useUiStore, type AllocationMode } from '@/store/ui-store';
 import { useTheme } from '@/theme';
 
 import { SOURCE_COLORS } from './source-meta';
@@ -20,7 +20,7 @@ export function AllocationCard({ snapshot }: { snapshot: PortfolioSnapshot }) {
   const theme = useTheme();
   const mode = useUiStore((s) => s.allocationMode);
   const setMode = useUiStore((s) => s.setAllocationMode);
-  const masked = useUiStore((s) => s.hideBalances);
+  const masked = useBalancesHidden();
   const slices =
     mode === 'class'
       ? allocationByClass(snapshot.holdings, theme.colors)

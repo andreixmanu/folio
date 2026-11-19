@@ -1,6 +1,6 @@
 import { allocationByClass } from '@/services/allocation';
 import type { Holding, PortfolioSnapshot } from '@/services/types';
-import { useUiStore } from '@/store/ui-store';
+import { balancesAreHidden } from '@/store/ui-store';
 import { darkColors } from '@/theme/colors';
 
 /** Wire shape of `POST /chat` `portfolio`. Amounts are omitted when balances are hidden. */
@@ -71,7 +71,7 @@ export function buildPortfolioContext(
   snapshot: PortfolioSnapshot,
   hideBalances?: boolean,
 ): ChatPortfolio {
-  const hide = hideBalances ?? useUiStore.getState().hideBalances;
+  const hide = hideBalances ?? balancesAreHidden();
   const total = snapshot.totalValue;
   const weights = roundedWeights(
     snapshot.holdings.map((holding) => holding.value),

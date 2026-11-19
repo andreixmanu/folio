@@ -12,7 +12,7 @@ import {
 } from '@/components/ui';
 import { formatMoney, formatPercent, formatQuantity, MASK } from '@/lib/format';
 import type { PortfolioSnapshot } from '@/services/types';
-import { useUiStore } from '@/store/ui-store';
+import { useBalancesHidden } from '@/store/ui-store';
 import { useTheme } from '@/theme';
 
 import { SOURCE_COLORS, SOURCE_ICONS } from './source-meta';
@@ -31,7 +31,7 @@ export function HoldingsBySource({
   onRetryWallets?: () => void;
 }) {
   const theme = useTheme();
-  const masked = useUiStore((s) => s.hideBalances);
+  const masked = useBalancesHidden();
   const groups = snapshot.sources
     .map((source) => {
       const holdings = snapshot.holdings

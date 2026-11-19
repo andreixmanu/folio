@@ -27,7 +27,7 @@ import { toISODate } from '@/features/budget/dates';
 import { useAccounts, useCategorizedTransactions, useRecurring, useRefreshBudget } from '@/features/budget/hooks';
 import { upcomingPayments } from '@/features/budget/recurring';
 import { formatMoney } from '@/lib/format';
-import { useUiStore } from '@/store/ui-store';
+import { useBalancesHidden } from '@/store/ui-store';
 import { useTheme } from '@/theme';
 
 const TOP_CATEGORIES = 5;
@@ -78,7 +78,7 @@ function DetailsSkeleton() {
 
 export default function OverviewScreen() {
   const theme = useTheme();
-  const masked = useUiStore((state) => state.hideBalances);
+  const masked = useBalancesHidden();
   const accountsQuery = useAccounts();
   const transactionsQuery = useCategorizedTransactions();
   const now = new Date();

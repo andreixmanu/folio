@@ -26,7 +26,7 @@ import {
   hasActiveFilters,
   type TxFilters,
 } from '@/features/budget/transactions-view';
-import { useUiStore } from '@/store/ui-store';
+import { useBalancesHidden } from '@/store/ui-store';
 import { useTheme } from '@/theme';
 
 const LIST_BATCH = 40;
@@ -95,7 +95,7 @@ function LoadingRows() {
 export default function TransactionsScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const masked = useUiStore((state) => state.hideBalances);
+  const masked = useBalancesHidden();
   const accountsQuery = useAccounts();
   const transactionsQuery = useCategorizedTransactions();
   const [now] = useState(() => new Date());

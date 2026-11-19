@@ -6,7 +6,7 @@ import { AllocationCard } from '@/features/portfolio/allocation-card';
 import { HoldingsBySource } from '@/features/portfolio/holdings-by-source';
 import { PortfolioHero } from '@/features/portfolio/portfolio-hero';
 import { usePortfolio } from '@/services/hooks';
-import { useUiStore } from '@/store/ui-store';
+import { useBalancesHidden, useUiStore } from '@/store/ui-store';
 import { useTheme } from '@/theme';
 
 function LoadingState() {
@@ -31,7 +31,7 @@ function LoadingState() {
 
 export default function PortfolioScreen() {
   const portfolio = usePortfolio();
-  const hideBalances = useUiStore((s) => s.hideBalances);
+  const hideBalances = useBalancesHidden();
   const toggleHideBalances = useUiStore((s) => s.toggleHideBalances);
 
   return (

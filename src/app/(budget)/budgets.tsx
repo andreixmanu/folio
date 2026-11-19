@@ -32,7 +32,7 @@ import { type CategoryId, type RecurringPayment } from '@/features/budget/model'
 import { useAllCategories, useCategory } from '@/features/budget/use-categories';
 import { useBudgetStore } from '@/features/budget/store';
 import { MASK } from '@/lib/format';
-import { useUiStore } from '@/store/ui-store';
+import { useBalancesHidden } from '@/store/ui-store';
 import { useTheme } from '@/theme';
 
 function LoadingState() {
@@ -181,7 +181,7 @@ function RecurringRow({
 
 export default function BudgetsScreen() {
   const theme = useTheme();
-  const masked = useUiStore((state) => state.hideBalances);
+  const masked = useBalancesHidden();
   const budgets = useBudgetStore((state) => state.budgets);
   const setBudgetLimit = useBudgetStore((state) => state.setBudgetLimit);
   const removeBudget = useBudgetStore((state) => state.removeBudget);

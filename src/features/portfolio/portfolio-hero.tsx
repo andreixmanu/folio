@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { useValueHistory, type PriceStatus } from '@/services/hooks';
 import { TIME_RANGES, type TimeRange } from '@/services/types';
-import { useUiStore } from '@/store/ui-store';
+import { useBalancesHidden, useUiStore } from '@/store/ui-store';
 import { enterFade, useTheme } from '@/theme';
 
 const RANGE_OPTIONS = TIME_RANGES.map((r) => ({ value: r, label: r === 'ALL' ? 'Tutto' : r }));
@@ -43,7 +43,7 @@ function PortfolioHeroImpl({
   const theme = useTheme();
   const range = useUiStore((s) => s.timeRange);
   const setRange = useUiStore((s) => s.setTimeRange);
-  const masked = useUiStore((s) => s.hideBalances);
+  const masked = useBalancesHidden();
   const history = useValueHistory(range, { t: pricesUpdatedAt, value: totalValue });
 
   const change = history.data?.change ?? 0;

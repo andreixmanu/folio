@@ -32,7 +32,7 @@ import { useCategorizedTransactions, useRefreshBudget } from '@/features/budget/
 import { isCategoryId } from '@/features/budget/model';
 import { useCategory } from '@/features/budget/use-categories';
 import { formatPercent } from '@/lib/format';
-import { useUiStore } from '@/store/ui-store';
+import { useBalancesHidden } from '@/store/ui-store';
 import { useTheme } from '@/theme';
 
 const PERIOD_OPTIONS: { value: BudgetPeriod; label: string }[] = [
@@ -122,7 +122,7 @@ function CategoryAnalysisRow({
 
 export default function AnalyticsScreen() {
   const theme = useTheme();
-  const masked = useUiStore((state) => state.hideBalances);
+  const masked = useBalancesHidden();
   const params = useLocalSearchParams<{ category?: string | string[] }>();
   const categoryParam = firstParam(params.category);
   const [period, setPeriod] = useState<BudgetPeriod>('1M');
